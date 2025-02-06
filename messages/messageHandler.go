@@ -39,27 +39,29 @@ func handleAIResponses(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 func sendPotentiallyBigAssMessage(s *discordgo.Session, m *discordgo.MessageCreate, message string) {
 	if len(message) >= 2000 {
-		chunks := make([]string, 0, len(message)/2000+1)
-		currentChunk := ""
-		for _, c := range message {
-			if len(currentChunk) >= 1999 {
-				chunks = append(chunks, currentChunk)
-				currentChunk = ""
-			}
-			currentChunk += string(c)
-		}
-		if currentChunk != "" {
-			chunks = append(chunks, currentChunk)
-		}
-		for _, chunk := range chunks[0:] {
-			s.ChannelMessageSendReply(m.ChannelID, chunk, m.Reference())
-		}
+		sendInChunks(s, m, message)
 	} else {
 		_, err := s.ChannelMessageSendReply(m.ChannelID, message, m.Reference())
-		if err != nil {
-			fmt.Println(err.Error())
-		}
+		handleErr(s, m, err)
 	}
+}
+
+func sendInChunks(s *discordgo.Session, m *discordgo.MessageCreate, message string) {
+	chunks := splitIntoChunks(message, 1999)
+
+	for _, chunk := range chunks {
+		s.ChannelMessageSendReply(m.ChannelID, chunk, m.Reference())
+	}
+}
+
+func splitIntoChunks(message string, chunkSize int) []string {
+	var chunks []string
+	for len(message) > 0 {
+		end := min(len(message), chunkSize)
+		chunks = append(chunks, message[:end])
+		message = message[end:]
+	}
+	return chunks
 }
 
 func handleErr(s *discordgo.Session, m *discordgo.MessageCreate, err error) {
@@ -67,4 +69,11 @@ func handleErr(s *discordgo.Session, m *discordgo.MessageCreate, err error) {
 		s.ChannelMessageSendReply(m.ChannelID, "Error:\n```"+err.Error()+"```", m.Reference())
 		return
 	}
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
