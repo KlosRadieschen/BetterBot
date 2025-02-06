@@ -11,13 +11,6 @@ import (
 
 var responses []messageResponse
 
-func Init() {
-	responses = append(responses, &messageResponseText{
-		trigger:  []string{"test"},
-		response: "Testing...",
-	})
-}
-
 func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.Bot {
 		return
@@ -26,11 +19,11 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	handleAIResponses(s, m)
 
 	for _, response := range responses {
-		for _, trigger := range getTriggers(response) {
+		for _, trigger := range response.triggers {
 			// Magical RegEx bullshiterry
-			match := regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta(trigger))).FindStringSubmatch(m.Content)
+			match := regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta(trigger))).FindStringSubmatch(strings.ToLower(m.Content))
 			if match != nil {
-				handleResponse(s, m, response)
+				response.handleResponse(s, m)
 			}
 		}
 	}

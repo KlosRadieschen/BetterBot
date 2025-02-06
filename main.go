@@ -11,7 +11,7 @@ import (
 
 func main() {
 	ai.Init()
-	messages.Init()
+	messages.FillResponses()
 
 	var err error
 	session, _ := discordgo.New("Bot " + secrets.BotToken)

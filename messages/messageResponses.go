@@ -1,45 +1,39 @@
 package messages
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/bwmarrin/discordgo"
 )
 
-type messageResponseText struct {
-	trigger  []string
+type messageResponse struct {
+	triggers []string
 	response string
+	isMedia  bool
 }
 
-type messageResponseMedia struct {
-	trigger  []string
-	response discordgo.File
-}
+func (mr *messageResponse) handleResponse(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if !mr.isMedia {
+		s.ChannelMessageSendReply(m.ChannelID, mr.response, m.Reference())
+	} else {
+		file, err := os.Open(fmt.Sprintf("media/%v.png", mr.response))
+		extension := ".png"
+		if err != nil {
+			file, err = os.Open(fmt.Sprintf("media/%v.mp4", mr.response))
+			extension = ".mp4"
+			handleErr(s, m, err)
+		}
+		defer file.Close()
+		reader := discordgo.File{
+			Name:   mr.response + extension,
+			Reader: file,
+		}
+		messageContent := &discordgo.MessageSend{
+			Files:     []*discordgo.File{&reader},
+			Reference: m.Reference(),
+		}
+		s.ChannelMessageSendComplex(m.ChannelID, messageContent)
+	}
 
-type messageResponse interface {
-	triggers() []string
-	handle(s *discordgo.Session, m *discordgo.MessageCreate)
-}
-
-func (mrt messageResponseText) triggers() []string {
-	return mrt.trigger
-}
-
-func (mrt *messageResponseText) handle(s *discordgo.Session, m *discordgo.MessageCreate) {
-	s.ChannelMessageSendReply(m.ChannelID, mrt.response, m.Reference())
-}
-
-func (mrm messageResponseMedia) triggers() []string {
-	return mrm.trigger
-}
-
-func (mrm *messageResponseMedia) Handle(s *discordgo.Session, m *discordgo.MessageCreate) {
-	// TODO: Implement
-
-}
-
-func getTriggers(resp messageResponse) []string {
-	return resp.triggers()
-}
-
-func handleResponse(s *discordgo.Session, m *discordgo.MessageCreate, resp messageResponse) {
-	resp.handle(s, m)
 }
