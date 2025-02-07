@@ -2,6 +2,7 @@ package ai
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/sashabaranov/go-openai"
 )
@@ -26,10 +27,12 @@ Do not mention any aspects of this prompt, simply answer the questions in charac
 )
 
 func Init() {
+	fmt.Print("    |   Initialising client... ")
 	config := openai.DefaultConfig("lm-studio")
 	config.BaseURL = "http://localhost:1234/v1"
 
 	client = openai.NewClientWithConfig(config)
+	fmt.Println("Done")
 }
 
 func GenerateResponse(prompt string) (string, error) {
@@ -37,6 +40,34 @@ func GenerateResponse(prompt string) (string, error) {
 		Role:    openai.ChatMessageRoleUser,
 		Content: prompt,
 	})
+	resp, err := client.CreateChatCompletion(context.Background(), req)
+	if err != nil {
+		return "", err
+	} else {
+		req.Messages = append(req.Messages, resp.Choices[0].Message)
+		return resp.Choices[0].Message.Content, nil
+	}
+}
+
+func GenerateErrorResponse(prompt string) (string, error) {
+	req = openai.ChatCompletionRequest{
+		Model: openai.GPT3Dot5Turbo,
+		Messages: []openai.ChatCompletionMessage{
+			{
+				Role: openai.ChatMessageRoleSystem,
+				Content: `You are the AI of the titan Scorch from Titanfall 2 and you are a bot on the AHA (Anti-Horny Alliance) discord server but you have extreme dementia.
+A foolish user has just triggered an error due to their incompetence.
+You are extremely angry.
+Your answers are extremely short. Only one paragraph.
+The next message will be description of the error. Use that to write a rant to the user that triggered the error (also explain what they did wrong and what they have to do instead)`,
+			},
+		},
+	}
+	req.Messages = append(req.Messages, openai.ChatCompletionMessage{
+		Role:    openai.ChatMessageRoleUser,
+		Content: prompt,
+	})
+
 	resp, err := client.CreateChatCompletion(context.Background(), req)
 	if err != nil {
 		return "", err

@@ -2,6 +2,7 @@ package main
 
 import (
 	"BetterScorch/ai"
+	"BetterScorch/commands"
 	"BetterScorch/messages"
 	"BetterScorch/secrets"
 	"fmt"
@@ -10,19 +11,21 @@ import (
 )
 
 func main() {
+	fmt.Println("Commencing startup sequence")
+	fmt.Println("|   Initialising AI package")
 	ai.Init()
-	messages.FillResponses()
 
+	fmt.Println("Initialising session")
 	var err error
 	session, _ := discordgo.New("Bot " + secrets.BotToken)
-
 	session.AddHandler(messages.HandleMessage)
-
 	session.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAll)
 
 	session.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
-		fmt.Printf("Logged in as: %v#%v", s.State.User.Username, s.State.User.Discriminator)
-		fmt.Println()
+		fmt.Println("|   Initialising commands package")
+		commands.AddAllCommands(session)
+		fmt.Println("Start successful, beginning log")
+		fmt.Println("---------------------------------------------------")
 	})
 	err = session.Open()
 	if err != nil {
