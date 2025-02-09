@@ -1,6 +1,10 @@
 package sender
 
-import "github.com/bwmarrin/discordgo"
+import (
+	"log"
+
+	"github.com/bwmarrin/discordgo"
+)
 
 func SendMessage(s *discordgo.Session, channelID string, message string) {
 	if len(message) >= 2000 {
@@ -54,10 +58,13 @@ func splitIntoChunks(message string, chunkSize int) []string {
 	return chunks
 }
 
-func HandleErr(s *discordgo.Session, channelID string, err error) {
+func HandleErr(s *discordgo.Session, channelID string, err error) bool {
 	if err != nil {
+		log.Printf("Received error: %s", err.Error())
 		s.ChannelMessageSend(channelID, "Error:\n```"+err.Error()+"```")
+		return true
 	}
+	return false
 }
 
 func min(a, b int) int {

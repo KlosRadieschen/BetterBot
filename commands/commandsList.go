@@ -51,6 +51,35 @@ var commands = []command{
 		},
 		handler: rollHandler,
 	},
+	{
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "addpersonality",
+			Description: "Add an AI personality to the server",
+			Options: []*discordgo.ApplicationCommandOption{
+				stringOption("name", "The FULL name of the personality", true),
+				stringOption("nickname", "The name that will trigger the personality", false),
+				stringOption("pfplink", "A link to an image which will be used as PFP", false),
+			},
+		},
+		handler: addPersonalityHandler,
+	},
+	{
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "killpersonality",
+			Description: "Remove an AI personality from the server",
+			Options: []*discordgo.ApplicationCommandOption{
+				stringOption("name", "The FULL name of the personality", true),
+			},
+		},
+		handler: killPersonalityHandler,
+	},
+	{
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "purgepersonalities",
+			Description: "Remove ALL AI personality from the server",
+		},
+		handler: purgeHandler,
+	},
 }
 
 func intOption(name string, desc string, required bool) *discordgo.ApplicationCommandOption {

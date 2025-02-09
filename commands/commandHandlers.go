@@ -4,6 +4,7 @@ import (
 	"BetterScorch/execution"
 	"BetterScorch/messages"
 	"BetterScorch/sender"
+	"BetterScorch/webhooks"
 	"fmt"
 	"math/rand"
 
@@ -68,4 +69,29 @@ func rollHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 
 	sender.Respond(s, i, fmt.Sprintf("%v%v/%v", reason, rand.Intn(max)+1, max))
+}
+
+func addPersonalityHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	nickname := i.ApplicationCommandData().Options[0].StringValue()
+	pfpLink := ""
+	for _, option := range i.ApplicationCommandData().Options {
+		switch option.Name {
+		case "nickname":
+			nickname = option.StringValue()
+		case "pfplink":
+			pfpLink = option.StringValue()
+		}
+	}
+	webhooks.AddPersonality(s, i, i.ApplicationCommandData().Options[0].StringValue(), nickname, pfpLink)
+	sender.Respond(s, i, fmt.Sprintf("%v added!", nickname))
+}
+
+func killPersonalityHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	webhooks.RemovePersonality(s, i, i.ApplicationCommandData().Options[0].StringValue())
+	sender.Respond(s, i, "fuck")
+}
+
+func purgeHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	sender.Respond(s, i, "SLAUGTHER")
+	webhooks.Purge(s, i)
 }

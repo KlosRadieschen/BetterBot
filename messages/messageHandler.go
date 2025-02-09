@@ -4,6 +4,7 @@ import (
 	"BetterScorch/ai"
 	"BetterScorch/execution"
 	"BetterScorch/sender"
+	"BetterScorch/webhooks"
 	"fmt"
 	"log"
 	"regexp"
@@ -20,6 +21,7 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	handleAIResponses(s, m)
+	webhooks.CheckAndRespondPersonalities(s, m)
 
 	for _, response := range responses {
 		for _, trigger := range response.triggers {
@@ -34,9 +36,10 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func handleAIResponses(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.Type == 19 && m.ReferencedMessage.Author.ID == "1196526025211904110" || strings.Contains(strings.ToLower(m.Content), "scorch") || strings.Contains(strings.ToLower(m.Content), "dementia") {
+	if m.Type == 19 && m.ReferencedMessage.Author.ID == "1196526025211904110" || regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta("scorch"))).FindStringSubmatch(strings.ToLower(m.Content)) != nil {
 		resp, err := ai.GenerateResponse(m.Content)
-		sender.HandleErr(s, m.ChannelID, err)
-		sender.SendReply(s, m, resp)
+		if !sender.HandleErr(s, m.ChannelID, err) {
+			sender.SendReply(s, m, resp)
+		}
 	}
 }

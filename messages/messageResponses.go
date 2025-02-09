@@ -23,7 +23,9 @@ func (mr *messageResponse) handleResponse(s *discordgo.Session, m *discordgo.Mes
 		if err != nil {
 			file, err = os.Open(fmt.Sprintf("media/%v.mp4", mr.response))
 			extension = ".mp4"
-			sender.HandleErr(s, m.ChannelID, err)
+			if sender.HandleErr(s, m.ChannelID, err) {
+				return
+			}
 		}
 		defer file.Close()
 		reader := discordgo.File{

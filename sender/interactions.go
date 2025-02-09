@@ -35,22 +35,27 @@ func Think(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	})
 }
 
-func HandleErrInteraction(s *discordgo.Session, i *discordgo.InteractionCreate, err error) {
-	log.Printf("Received error: %s", err.Error())
+func HandleErrInteraction(s *discordgo.Session, i *discordgo.InteractionCreate, err error) bool {
 	if err != nil {
+		log.Printf("Received error: %s", err.Error())
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "Error:\n```" + err.Error() + "```",
 			},
 		})
+		return true
 	}
+	return false
 }
 
-func HandleErrInteractionFollowup(s *discordgo.Session, i *discordgo.InteractionCreate, err error) {
+func HandleErrInteractionFollowup(s *discordgo.Session, i *discordgo.InteractionCreate, err error) bool {
 	if err != nil {
+		log.Printf("Received error: %s", err.Error())
 		s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 			Content: "Error:\n```" + err.Error() + "```",
 		})
+		return true
 	}
+	return false
 }
