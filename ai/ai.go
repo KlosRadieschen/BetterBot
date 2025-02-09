@@ -37,7 +37,7 @@ func Init() {
 	fmt.Println("Done")
 }
 
-func GenerateResponse(prompt string, reqs ...openai.ChatCompletionRequest) (string, error) {
+func GenerateResponse(authorName string, prompt string, reqs ...openai.ChatCompletionRequest) (string, error) {
 	req := scorchReq
 	if len(reqs) == 1 {
 		req = reqs[0]
@@ -46,7 +46,7 @@ func GenerateResponse(prompt string, reqs ...openai.ChatCompletionRequest) (stri
 	}
 	req.Messages = append(req.Messages, openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleUser,
-		Content: prompt,
+		Content: authorName + ": " + prompt,
 	})
 	resp, err := client.CreateChatCompletion(context.Background(), req)
 	if err != nil {

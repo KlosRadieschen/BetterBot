@@ -3,6 +3,7 @@ package commands
 import (
 	"BetterScorch/execution"
 	"BetterScorch/messages"
+	"BetterScorch/secrets"
 	"BetterScorch/sender"
 	"BetterScorch/webhooks"
 	"fmt"
@@ -83,7 +84,7 @@ func addPersonalityHandler(s *discordgo.Session, i *discordgo.InteractionCreate)
 		}
 	}
 	webhooks.AddPersonality(s, i, i.ApplicationCommandData().Options[0].StringValue(), nickname, pfpLink)
-	sender.Respond(s, i, fmt.Sprintf("%v added!", nickname))
+	sender.Respond(s, i, fmt.Sprintf("%v joined the chat", nickname))
 }
 
 func killPersonalityHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -94,4 +95,30 @@ func killPersonalityHandler(s *discordgo.Session, i *discordgo.InteractionCreate
 func purgeHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	sender.Respond(s, i, "SLAUGTHER")
 	webhooks.Purge(s, i)
+}
+
+func exposeHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	if messages.Msgs[i.ApplicationCommandData().Options[0].UserValue(nil).ID] == nil {
+		sender.Respond(s, i, "User doesn't have any messages")
+		return
+	}
+
+	member, _ := s.GuildMember(secrets.GuildID, i.ApplicationCommandData().Options[0].UserValue(nil).ID)
+	embed := discordgo.MessageEmbed{
+		Title: "Exposing " + member.Nick,
+		Color: 0xFF69B4,
+	}
+	for msg := messages.Msgs[i.ApplicationCommandData().Options[0].UserValue(nil).ID].Front(); msg != nil; msg = msg.Next() {
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+			Name:   fmt.Sprintf("<t:%v:R>", msg.Value.(*discordgo.Message).Timestamp.Unix()),
+			Value:  msg.Value.(*discordgo.Message).Content,
+			Inline: false,
+		})
+	}
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Embeds: []*discordgo.MessageEmbed{&embed},
+		},
+	})
 }

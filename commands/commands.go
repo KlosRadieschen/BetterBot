@@ -16,11 +16,11 @@ type command struct {
 
 func AddAllCommands(s *discordgo.Session) {
 	fmt.Print("    |   Deleting current commands... ")
-	s.ApplicationCommandBulkOverwrite(s.State.Application.ID, secrets.GuildID, []*discordgo.ApplicationCommand{})
+	// s.ApplicationCommandBulkOverwrite(s.State.Application.ID, secrets.GuildID, []*discordgo.ApplicationCommand{})
 	fmt.Println("Done")
 
 	fmt.Print("    |   Re-adding existing commands... ")
-	for _, command := range commands {
+	for i, command := range commands {
 		_, err := s.ApplicationCommandCreate(s.State.Application.ID, secrets.GuildID, command.declaration)
 		if err != nil {
 			panic(err.Error())
@@ -32,7 +32,10 @@ func AddAllCommands(s *discordgo.Session) {
 				command.handler(s, i)
 			}
 		})
+		fmt.Println()
+		fmt.Printf("        |   %.2f/100", (float32(i) / float32(len(commands)) * 100))
 	}
+	fmt.Println()
 	fmt.Println("Done")
 }
 

@@ -80,6 +80,16 @@ var commands = []command{
 		},
 		handler: purgeHandler,
 	},
+	{
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "expose",
+			Description: "Show the target's recent messages",
+			Options: []*discordgo.ApplicationCommandOption{
+				userOption("target", "The target that you want to expose", true),
+			},
+		},
+		handler: exposeHandler,
+	},
 }
 
 func intOption(name string, desc string, required bool) *discordgo.ApplicationCommandOption {
@@ -105,6 +115,16 @@ func stringOption(name string, desc string, required bool) *discordgo.Applicatio
 func boolOption(name string, desc string, required bool) *discordgo.ApplicationCommandOption {
 	option := discordgo.ApplicationCommandOption{
 		Type:        discordgo.ApplicationCommandOptionBoolean,
+		Name:        name,
+		Description: desc,
+		Required:    required,
+	}
+	return &option
+}
+
+func userOption(name string, desc string, required bool) *discordgo.ApplicationCommandOption {
+	option := discordgo.ApplicationCommandOption{
+		Type:        discordgo.ApplicationCommandOptionUser,
 		Name:        name,
 		Description: desc,
 		Required:    required,

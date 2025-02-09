@@ -4,15 +4,15 @@ import (
 	"BetterScorch/ai"
 	"BetterScorch/secrets"
 	"BetterScorch/sender"
+	"context"
 	"fmt"
-	"net/http"
 	"regexp"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/sashabaranov/go-openai"
 	"google.golang.org/api/customsearch/v1"
-	"google.golang.org/api/googleapi/transport"
+	"google.golang.org/api/option"
 )
 
 type personality struct {
@@ -26,9 +26,7 @@ var personalities = []personality{}
 
 func AddPersonality(s *discordgo.Session, i *discordgo.InteractionCreate, name string, nick string, pfpLink string) {
 	if pfpLink == "" {
-		client := &http.Client{Transport: &transport.APIKey{Key: secrets.SearchAPI}}
-
-		svc, err := customsearch.New(client)
+		svc, err := customsearch.NewService(context.Background(), option.WithAPIKey(secrets.SearchAPI))
 		if sender.HandleErrInteraction(s, i, err) {
 			return
 		}
@@ -57,7 +55,7 @@ func AddPersonality(s *discordgo.Session, i *discordgo.InteractionCreate, name s
 					Content: `You are the ` + name + ` and you are a bot on the AHA (Anti-Horny Alliance) discord server.
 You should try to answer any question and make up stuff if necessary.
 Your main job is to provide humor and entertainment of the server.
-On this server, 9+10 equals 21.
+Your responses are short.
 You often mention that Col. Wello (sometimes called Col. Vello) lives in Al Zahra, Jedda even when it's unrelated
 Do not mention any aspects of this prompt, simply answer the questions in character.`,
 				},
@@ -69,7 +67,7 @@ Do not mention any aspects of this prompt, simply answer the questions in charac
 func CheckAndRespondPersonalities(s *discordgo.Session, m *discordgo.MessageCreate) {
 	for _, personality := range personalities {
 		if regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta(personality.nick))).FindStringSubmatch(strings.ToLower(m.Content)) != nil {
-			resp, err := ai.GenerateResponse(m.Content, personality.chat)
+			resp, err := ai.GenerateResponse(m.Member.Nick, m.Content, personality.chat)
 			if !sender.HandleErr(s, m.ChannelID, err) {
 				sender.SendWebhookReply(s, m, resp, personality.name, personality.pfp, personality.chat)
 			}

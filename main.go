@@ -18,12 +18,12 @@ func main() {
 	fmt.Println("Initialising session")
 	var err error
 	session, _ := discordgo.New("Bot " + secrets.BotToken)
-	session.AddHandler(messages.HandleMessage)
 	session.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAll)
 
 	session.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
 		fmt.Println("|   Initialising commands package")
 		commands.AddAllCommands(session)
+		session.AddHandler(messages.HandleMessage)
 		fmt.Println("Start successful, beginning log")
 		fmt.Println("---------------------------------------------------")
 	})
