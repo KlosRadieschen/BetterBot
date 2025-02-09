@@ -5,20 +5,20 @@ import (
 	"BetterScorch/execution"
 	"BetterScorch/sender"
 	"fmt"
+	"log"
 	"regexp"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
 
+var Sleeping = false
+
 func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.Author.Bot {
+	if m.Author.Bot || execution.CheckAndDeleteExecuteeMessage(s, m) || Sleeping {
 		return
 	}
 
-	if execution.CheckAndDeleteExecuteeMessage(s, m) {
-		return
-	}
 	handleAIResponses(s, m)
 
 	for _, response := range responses {
@@ -26,6 +26,7 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 			// Magical RegEx bullshiterry
 			match := regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta(trigger))).FindStringSubmatch(strings.ToLower(m.Content))
 			if match != nil {
+				log.Println("Found trigger: " + trigger)
 				response.handleResponse(s, m)
 			}
 		}
