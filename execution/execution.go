@@ -2,6 +2,7 @@ package execution
 
 import (
 	"BetterScorch/secrets"
+	"BetterScorch/sender"
 	"fmt"
 	"slices"
 
@@ -25,7 +26,7 @@ func Execute(s *discordgo.Session, userID string, channelID string, sacrificed b
 			executees[index].count++
 			executees[index].sacrificed = false
 
-			SendMessage(s, channelID, fmt.Sprintf("Increasing %v's execution count to %v!", Member(s, userID).Mention(), executee.count+1))
+			sender.SendMessage(s, channelID, fmt.Sprintf("Increasing %v's execution count to %v!", Member(s, userID).Mention(), executee.count+1))
 			return
 		}
 	}
@@ -45,7 +46,7 @@ func Execute(s *discordgo.Session, userID string, channelID string, sacrificed b
 		role:       roleID,
 		sacrificed: sacrificed,
 	})
-	SendMessage(s, channelID, fmt.Sprintf("%v is fucking dead", Member(s, userID).Mention()))
+	sender.SendMessage(s, channelID, fmt.Sprintf("%v is fucking dead", Member(s, userID).Mention()))
 }
 
 func Revive(s *discordgo.Session, userID string, channelID string) {
@@ -53,7 +54,7 @@ func Revive(s *discordgo.Session, userID string, channelID string) {
 	for i, executee := range executees {
 		if executee.id == member.User.ID {
 			for range executee.count {
-				SendMessage(s, channelID, fmt.Sprintf("%v\nhttps://tenor.com/view/cat-revive-friends-animated-friendship-gif-8246087956711984034", member.Mention()))
+				sender.SendMessage(s, channelID, fmt.Sprintf("%v\nhttps://tenor.com/view/cat-revive-friends-animated-friendship-gif-8246087956711984034", member.Mention()))
 			}
 			s.GuildMemberRoleRemove(secrets.GuildID, userID, "1253410294999548046")
 			s.GuildMemberRoleAdd(secrets.GuildID, userID, executee.role)
@@ -62,7 +63,7 @@ func Revive(s *discordgo.Session, userID string, channelID string) {
 		}
 	}
 
-	SendMessage(s, channelID, fmt.Sprintf("%v has been revived!", member.Mention()))
+	sender.SendMessage(s, channelID, fmt.Sprintf("%v has been revived!", member.Mention()))
 }
 
 func IsDead(userID string) bool {
@@ -97,43 +98,4 @@ func CheckAndDeleteExecuteeMessage(s *discordgo.Session, m *discordgo.MessageCre
 func Member(s *discordgo.Session, userID string) *discordgo.Member {
 	member, _ := s.GuildMember(secrets.GuildID, userID)
 	return member
-}
-
-func SendMessage(s *discordgo.Session, channelID string, message string) {
-	if len(message) >= 2000 {
-		sendMessageInChunks(s, channelID, message)
-	} else {
-		_, err := s.ChannelMessageSend(channelID, message)
-		handleErr(s, channelID, err)
-	}
-}
-
-func sendMessageInChunks(s *discordgo.Session, channelID string, message string) {
-	chunks := splitIntoChunks(message, 1999)
-	msg, _ := s.ChannelMessageSend(channelID, chunks[0])
-	previous := msg.Reference()
-
-	for i, chunk := range chunks {
-		if i == 0 {
-			break
-		}
-		msg, _ := s.ChannelMessageSendReply(channelID, chunk, previous)
-		previous = msg.Reference()
-	}
-}
-
-func splitIntoChunks(message string, chunkSize int) []string {
-	var chunks []string
-	for len(message) > 0 {
-		end := min(len(message), chunkSize)
-		chunks = append(chunks, message[:end])
-		message = message[end:]
-	}
-	return chunks
-}
-
-func handleErr(s *discordgo.Session, channelID string, err error) {
-	if err != nil {
-		s.ChannelMessageSend(channelID, "Error:\n```"+err.Error()+"```")
-	}
 }

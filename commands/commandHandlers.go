@@ -3,6 +3,7 @@ package commands
 import (
 	"BetterScorch/ai"
 	"BetterScorch/execution"
+	"log"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -63,6 +64,7 @@ func think(s *discordgo.Session, i *discordgo.InteractionCreate) {
 }
 
 func handleErr(s *discordgo.Session, i *discordgo.InteractionCreate, err error) {
+	log.Printf("Received error: %s", err.Error())
 	if err != nil {
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
