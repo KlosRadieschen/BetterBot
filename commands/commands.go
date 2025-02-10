@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"BetterScorch/secrets"
 	"fmt"
 	"log"
 	"slices"
@@ -21,10 +20,12 @@ func AddAllCommands(s *discordgo.Session) {
 
 	fmt.Print("    |   Re-adding existing commands... ")
 	for i, command := range commands {
-		_, err := s.ApplicationCommandCreate(s.State.Application.ID, secrets.GuildID, command.declaration)
-		if err != nil {
-			panic(err.Error())
-		}
+		/*
+			_, err := s.ApplicationCommandCreate(s.State.Application.ID, secrets.GuildID, command.declaration)
+			if err != nil {
+				panic(err.Error())
+			}
+		*/
 
 		s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			if i.ApplicationCommandData().Name == command.declaration.Name {
@@ -33,7 +34,7 @@ func AddAllCommands(s *discordgo.Session) {
 			}
 		})
 		fmt.Println()
-		fmt.Printf("        |   %.2f/100", (float32(i) / float32(len(commands)) * 100))
+		fmt.Printf("        |   %.0f/100", (float32(i+1) / float32(len(commands)) * 100))
 	}
 	fmt.Println()
 	fmt.Println("Done")

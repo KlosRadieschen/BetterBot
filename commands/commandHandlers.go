@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"BetterScorch/ai"
 	"BetterScorch/execution"
 	"BetterScorch/messages"
 	"BetterScorch/secrets"
@@ -121,4 +122,12 @@ func exposeHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			Embeds: []*discordgo.MessageEmbed{&embed},
 		},
 	})
+}
+
+func linkHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	sender.Think(s, i)
+	resp, err := ai.GenerateSingleResponse("Write an extremely annoying and obnoxious short (only one paragraph) ad for the AHA website which lets you read reports from the AHA and modify your character. Put in the link like this: [AHA website](https://aha-rp.org)")
+	if !sender.HandleErrInteractionFollowup(s, i, err) {
+		sender.Followup(s, i, resp)
+	}
 }

@@ -62,7 +62,8 @@ func GenerateSingleResponse(prompt string) (string, error) {
 		Model: openai.GPT3Dot5Turbo,
 		Messages: []openai.ChatCompletionMessage{
 			{
-				Role: openai.ChatMessageRoleSystem,
+				Role:    openai.ChatMessageRoleSystem,
+				Content: prompt,
 			},
 		},
 	}

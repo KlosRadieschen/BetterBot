@@ -90,6 +90,13 @@ var commands = []command{
 		},
 		handler: exposeHandler,
 	},
+	{
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "link",
+			Description: "Get the link to the website",
+		},
+		handler: linkHandler,
+	},
 }
 
 func intOption(name string, desc string, required bool) *discordgo.ApplicationCommandOption {
