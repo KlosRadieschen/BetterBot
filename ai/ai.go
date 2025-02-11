@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/sashabaranov/go-openai"
 )
@@ -37,18 +38,19 @@ func Init() {
 	fmt.Println("Done")
 }
 
-func GenerateResponse(authorName string, prompt string, reqs ...openai.ChatCompletionRequest) (string, error) {
-	req := scorchReq
+func GenerateResponse(authorName string, prompt string, reqs ...*openai.ChatCompletionRequest) (string, error) {
+	req := &scorchReq
 	if len(reqs) == 1 {
 		req = reqs[0]
 	} else if len(reqs) != 0 {
-		return "", errors.New("Variadic parameter must be zero or one")
+		return "", errors.New("Variadic parameter count must be zero or one")
 	}
 	req.Messages = append(req.Messages, openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleUser,
 		Content: authorName + ": " + prompt,
 	})
-	resp, err := client.CreateChatCompletion(context.Background(), req)
+	resp, err := client.CreateChatCompletion(context.Background(), *req)
+
 	if err != nil {
 		return "", err
 	} else {
@@ -77,6 +79,7 @@ func GenerateSingleResponse(prompt string) (string, error) {
 }
 
 func GenerateErrorResponse(prompt string) (string, error) {
+	log.Println("Received custom error: " + prompt)
 	req := openai.ChatCompletionRequest{
 		Model: openai.GPT3Dot5Turbo,
 		Messages: []openai.ChatCompletionMessage{

@@ -9,6 +9,7 @@ import (
 	"BetterScorch/webhooks"
 	"fmt"
 	"math/rand"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -74,6 +75,7 @@ func rollHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 }
 
 func addPersonalityHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	sender.Think(s, i)
 	nickname := i.ApplicationCommandData().Options[0].StringValue()
 	pfpLink := ""
 	for _, option := range i.ApplicationCommandData().Options {
@@ -84,18 +86,36 @@ func addPersonalityHandler(s *discordgo.Session, i *discordgo.InteractionCreate)
 			pfpLink = option.StringValue()
 		}
 	}
-	webhooks.AddPersonality(s, i, i.ApplicationCommandData().Options[0].StringValue(), nickname, pfpLink)
-	sender.Respond(s, i, fmt.Sprintf("%v joined the chat", nickname))
+
+	name := i.ApplicationCommandData().Options[0].StringValue()
+	appropriate, err := webhooks.IsAppropriate(name)
+	if sender.HandleErrInteractionFollowup(s, i, err) {
+		return
+	} else if appropriate && len(name) <= 80 && !strings.Contains(strings.ToLower(name), "discord") && !strings.Contains(strings.ToLower(name), "clyde") {
+		webhooks.AddPersonality(s, i, name, nickname, pfpLink)
+		sender.Followup(s, i, fmt.Sprintf("%v joined the chat", nickname))
+	} else {
+		sender.RespondError(s, i, "They tried to add an AI personality but the name \""+name+"\" was deemed inappropriate")
+	}
 }
 
 func killPersonalityHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	webhooks.RemovePersonality(s, i, i.ApplicationCommandData().Options[0].StringValue())
-	sender.Respond(s, i, "fuck")
+	name := i.ApplicationCommandData().Options[0].StringValue()
+	if webhooks.PersonalityExists(name) {
+		sender.Respond(s, i, "I'm shooting "+name)
+		webhooks.RemovePersonality(s, i, name)
+	} else {
+		sender.RespondError(s, i, "The user is trying to remove the AI personality \""+name+"\" but it does not exist")
+	}
 }
 
 func purgeHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	sender.Respond(s, i, "SLAUGTHER")
-	webhooks.Purge(s, i)
+	if webhooks.PersonalitiesEmpty() {
+		sender.RespondError(s, i, "The user is trying to purge AI personalities but there are currently none")
+	} else {
+		sender.Respond(s, i, "https://tenor.com/view/langley-thanos-gif-20432464")
+		webhooks.Purge(s, i)
+	}
 }
 
 func exposeHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {

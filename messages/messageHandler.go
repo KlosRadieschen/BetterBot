@@ -18,7 +18,8 @@ var Sleeping = false
 var Msgs = make(map[string]*list.List)
 
 func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.Author.Bot || execution.CheckAndDeleteExecuteeMessage(s, m) || Sleeping {
+	channel, _ := s.Channel(m.ChannelID)
+	if m.Author.Bot || execution.CheckAndDeleteExecuteeMessage(s, m) || Sleeping || (channel.ParentID != "1234128503968891032" && channel.ParentID != "1300423257262133280") {
 		return
 	}
 

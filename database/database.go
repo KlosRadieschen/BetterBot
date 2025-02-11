@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-type dbValue struct {
+type DBValue struct {
 	name  string
 	value string
 }
@@ -30,16 +30,20 @@ func Connect() {
 	db.SetConnMaxLifetime(time.Hour * 2) // Connections are recycled after two hours.
 }
 
-func Insert(table string, values ...dbValue) error {
+func Insert(table string, values ...DBValue) error {
 	err := db.Ping()
 	if err != nil {
 		return err
 	}
 
-	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)",
+	query := fmt.Sprintf(
+		"INSERT INTO %s (%s) VALUES (%s)",
 		table,
 		strings.Join(getDBValueNames(values), ", "),
-		strings.Repeat("?,", len(values)))
+		strings.Repeat("?,", len(values)),
+	)
+
+	log.Println(fmt.Sprintf("Executing query: %v", query))
 
 	stmt, err := db.Prepare(query)
 	if err != nil {
@@ -55,7 +59,60 @@ func Insert(table string, values ...dbValue) error {
 	return nil
 }
 
-func getDBValues(dbVals []dbValue) []string {
+func Update(table string, keyValue *DBValue, values ...DBValue) error {
+	err := db.Ping()
+	if err != nil {
+		return err
+	}
+
+	setClause := strings.Join(getUpdateSetClause(values), ", ")
+	query := fmt.Sprintf(
+		"UPDATE %s SET %s WHERE %s=?",
+		table,
+		setClause,
+		keyValue.name,
+	)
+
+	log.Println(fmt.Sprintf("Executing query: %v", query))
+
+	stmt, err := db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	args := append(getDBValues(values), keyValue.value)
+	_, err = stmt.Exec(args)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func Remove(table string, keyValue *DBValue) error {
+	err := db.Ping()
+	if err != nil {
+		return err
+	}
+
+	log.Println(fmt.Sprintf("Executing query: DELETE FROM %v WHERE %v=%v", table, keyValue.name, keyValue.value))
+
+	stmt, err := db.Prepare("DELETE FROM ? WHERE ?=?")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(table, keyValue.name, keyValue.value)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func getDBValues(dbVals []DBValue) []string {
 	var values []string
 
 	for _, dv := range dbVals {
@@ -65,7 +122,7 @@ func getDBValues(dbVals []dbValue) []string {
 	return values
 }
 
-func getDBValueNames(dbVals []dbValue) []string {
+func getDBValueNames(dbVals []DBValue) []string {
 	var names []string
 
 	for _, dv := range dbVals {
@@ -73,4 +130,14 @@ func getDBValueNames(dbVals []dbValue) []string {
 	}
 
 	return names
+}
+
+func getUpdateSetClause(dbVals []DBValue) []string {
+	var setClause []string
+
+	for _, dv := range dbVals {
+		setClause = append(setClause, fmt.Sprintf("%s=?", dv.name))
+	}
+
+	return setClause
 }
