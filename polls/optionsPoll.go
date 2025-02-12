@@ -76,6 +76,13 @@ func CreateOptionsPoll(s *discordgo.Session, creatorID string, multioption bool,
 func WaitAndEvaluate(s *discordgo.Session, pollID string, endTime time.Time) {
 	time.Sleep(endTime.Sub(time.Now()))
 	updatePollMessage(s, pollID, true)
+
+	thread, _ := s.MessageThreadStart(pollChannelID, pollID, "Results", 60*24)
+	allVotes, _ := GetAllVotesString(pollID)
+	s.ChannelMessageSendComplex(thread.ID, &discordgo.MessageSend{Content: allVotes})
+	trueBool := true
+	s.ChannelEdit(thread.ID, &discordgo.ChannelEdit{Locked: &trueBool})
+
 	optionPolls[pollID] = nil
 }
 
@@ -159,29 +166,38 @@ func updatePollMessage(s *discordgo.Session, pollID string, isOver bool) {
 		})
 	}
 
-	newContent := poll.Content
+	var edit discordgo.MessageEdit
 	if isOver {
-		newContent = strings.Replace(poll.Content, "expires", "expired", -1)
-	}
-
-	edit := discordgo.MessageEdit{
-		Channel: poll.ChannelID,
-		ID:      poll.ID,
-		Content: &newContent,
-		Embeds:  &poll.Embeds,
-		Components: &[]discordgo.MessageComponent{
-			row,
-			discordgo.ActionsRow{
-				Components: []discordgo.MessageComponent{
-					discordgo.Button{
-						CustomID: "pollshow",
-						Label:    "Show votes",
-						Style:    discordgo.SuccessButton,
-						Disabled: false,
+		newContent := strings.Replace(poll.Content, "expires", "expired", -1)
+		edit = discordgo.MessageEdit{
+			Channel: poll.ChannelID,
+			ID:      poll.ID,
+			Content: &newContent,
+			Embeds:  &poll.Embeds,
+			Components: &[]discordgo.MessageComponent{
+				row,
+			},
+		}
+	} else {
+		edit = discordgo.MessageEdit{
+			Channel: poll.ChannelID,
+			ID:      poll.ID,
+			Content: &poll.Content,
+			Embeds:  &poll.Embeds,
+			Components: &[]discordgo.MessageComponent{
+				row,
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.Button{
+							CustomID: "pollshow",
+							Label:    "Show votes",
+							Style:    discordgo.SuccessButton,
+							Disabled: false,
+						},
 					},
 				},
 			},
-		},
+		}
 	}
 
 	s.ChannelMessageEditComplex(&edit)
