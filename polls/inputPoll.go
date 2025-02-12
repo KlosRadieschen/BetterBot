@@ -83,21 +83,15 @@ func WaitAndEvaluateInput(s *discordgo.Session, pollID string, endTime time.Time
 		Channel: poll.ChannelID,
 		ID:      poll.ID,
 		Content: &newContent,
-		Components: &[]discordgo.MessageComponent{
-			discordgo.ActionsRow{
-				Components: []discordgo.MessageComponent{
-					discordgo.Button{
-						CustomID: "inputpollshow",
-						Label:    "Show votes",
-						Style:    discordgo.SuccessButton,
-						Disabled: false,
-					},
-				},
-			},
-		},
 	}
 
 	s.ChannelMessageEditComplex(&edit)
+
+	thread, _ := s.MessageThreadStart(pollChannelID, pollID, "Results", 60*24)
+	embeds, _ := GetAllInputsEmbeds(s, pollID)
+	s.ChannelMessageSendComplex(thread.ID, &discordgo.MessageSend{
+		Embeds: embeds,
+	})
 
 	inputPolls[pollID] = nil
 }
