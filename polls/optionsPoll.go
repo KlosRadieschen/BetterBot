@@ -78,8 +78,8 @@ func WaitAndEvaluate(s *discordgo.Session, pollID string, endTime time.Time) {
 	updatePollMessage(s, pollID, true)
 
 	thread, _ := s.MessageThreadStart(pollChannelID, pollID, "Results", 60*24)
-	allVotes, _ := GetAllVotesString(pollID)
-	s.ChannelMessageSendComplex(thread.ID, &discordgo.MessageSend{Content: allVotes})
+	allVotes, _ := GetAllVotesEmbeds(s, pollID)
+	s.ChannelMessageSendComplex(thread.ID, &discordgo.MessageSend{Embeds: allVotes})
 	trueBool := true
 	s.ChannelEdit(thread.ID, &discordgo.ChannelEdit{Locked: &trueBool})
 
@@ -140,7 +140,7 @@ func removeElement(slice []int, element int) []int {
 
 func updatePollMessage(s *discordgo.Session, pollID string, isOver bool) {
 	poll, _ := s.ChannelMessage(pollChannelID, pollID)
-	votesSum := getVotesSum(pollID)
+	votesSum := GetVotesSum(pollID)
 
 	row := discordgo.ActionsRow{}
 	for i, option := range poll.Components[0].(*discordgo.ActionsRow).Components {
@@ -220,8 +220,7 @@ func GetAllVotesString(pollID string) (string, error) {
 		}
 
 		if len(voterPings) != 0 {
-			allVotes += fmt.Sprintf("%v: %v", emojis[i], strings.Join(voterPings, ", "))
-			allVotes += "\n"
+			allVotes += fmt.Sprintf("%v: %v\n\n", emojis[i], strings.Join(voterPings, ", "))
 		}
 	}
 
@@ -231,7 +230,33 @@ func GetAllVotesString(pollID string) (string, error) {
 	return allVotes, nil
 }
 
-func getVotesSum(pollID string) int {
+func GetAllVotesEmbeds(s *discordgo.Session, pollID string) ([]*discordgo.MessageEmbed, error) {
+	emojis := []string{"🔥", "🍷", "💀", "👻", "🎶"}
+	_, exists := optionPolls[pollID]
+	if !exists {
+		return nil, fmt.Errorf("Poll doesn't exist")
+	}
+
+	embeds := []*discordgo.MessageEmbed{}
+
+	for i := range len(optionPolls[pollID].votes) {
+		if 
+		embeds = append(embeds, &discordgo.MessageEmbed{Title: emojis[i], Color: 0x3498db})
+	}
+
+	for i := range optionPolls[pollID].votes {
+		for voter, votes := range optionPolls[pollID].voters {
+			if slices.Contains(votes, i) {
+				member, _ := s.GuildMember(secrets.GuildID, voter)
+				embeds[i].Fields = append(embeds[i].Fields, &discordgo.MessageEmbedField{Name: member.Nick})
+			}
+		}
+	}
+
+	return embeds, nil
+}
+
+func GetVotesSum(pollID string) int {
 	sum := 0
 	for _, vote := range optionPolls[pollID].votes {
 		sum += vote

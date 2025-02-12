@@ -38,24 +38,3 @@ func inputPollModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) 
 	sender.RespondEphemeral(s, i, "Answer submitted")
 	sender.SetResponseTimeout(s, i, 5*time.Second)
 }
-
-func inputPollShowHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	sender.ThinkEphemeral(s, i)
-	embeds, err := polls.GetAllInputsEmbeds(s, i.Message.ID)
-	if err != nil {
-		sender.RespondEphemeral(s, i, "Sorry, his poll is broken")
-	} else {
-		if polls.GetNumberOfInputs(i.Message.ID) == 0 {
-			s.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
-				Flags:   discordgo.MessageFlagsEphemeral,
-				Content: "No responses",
-			})
-			sender.SetResponseTimeout(s, i, 3*time.Second)
-		} else {
-			s.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
-				Flags:  discordgo.MessageFlagsEphemeral,
-				Embeds: embeds,
-			})
-		}
-	}
-}
