@@ -80,18 +80,19 @@ func WaitAndEvaluateInput(s *discordgo.Session, pollID string, endTime time.Time
 	poll, _ := s.ChannelMessage(pollChannelID, pollID)
 	newContent := strings.Replace(poll.Content, "expires", "expired", -1)
 	edit := discordgo.MessageEdit{
-		Channel: poll.ChannelID,
-		ID:      poll.ID,
-		Content: &newContent,
+		Channel:    poll.ChannelID,
+		ID:         poll.ID,
+		Content:    &newContent,
+		Components: &[]discordgo.MessageComponent{},
 	}
 
 	s.ChannelMessageEditComplex(&edit)
 
 	thread, _ := s.MessageThreadStart(pollChannelID, pollID, "Results", 60*24)
 	embeds, _ := GetAllInputsEmbeds(s, pollID)
-	s.ChannelMessageSendComplex(thread.ID, &discordgo.MessageSend{
-		Embeds: embeds,
-	})
+	s.ChannelMessageSendComplex(thread.ID, &discordgo.MessageSend{Embeds: embeds})
+	trueBool := true
+	s.ChannelEdit(thread.ID, &discordgo.ChannelEdit{Locked: &trueBool})
 
 	inputPolls[pollID] = nil
 }
