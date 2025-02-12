@@ -1,9 +1,13 @@
 package commands
 
 import (
+	"BetterScorch/execution"
+	"BetterScorch/secrets"
+	"BetterScorch/sender"
 	"fmt"
 	"log"
 	"slices"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -14,29 +18,40 @@ type command struct {
 }
 
 func AddAllCommands(s *discordgo.Session) {
-	fmt.Print("    |   Deleting current commands... ")
-	// s.ApplicationCommandBulkOverwrite(s.State.Application.ID, secrets.GuildID, []*discordgo.ApplicationCommand{})
+	fmt.Print("    |   Adding slash commands... ")
+
+	commandSlice := []*discordgo.ApplicationCommand{}
+	for _, command := range commands {
+		commandSlice = append(commandSlice, command.declaration)
+	}
+	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		if i.Type == discordgo.InteractionApplicationCommand {
+			if execution.IsDead(i.Member.User.ID) {
+				sender.RespondEphemeral(s, i, "https://tenor.com/view/yellow-emoji-no-no-emotiguy-no-no-no-gif-gif-9742000569423889376")
+			} else {
+				log.Println("Received Command: " + i.ApplicationCommandData().Name)
+				if h, ok := commands[i.ApplicationCommandData().Name]; ok {
+					h.handler(s, i)
+				}
+			}
+		}
+	})
+	s.ApplicationCommandBulkOverwrite(s.State.Application.ID, secrets.GuildID, commandSlice)
 	fmt.Println("Done")
 
-	fmt.Print("    |   Re-adding existing commands... ")
-	for i, command := range commands {
-		/*
-			_, err := s.ApplicationCommandCreate(s.State.Application.ID, secrets.GuildID, command.declaration)
-			if err != nil {
-				panic(err.Error())
-			}
-		*/
-
+	fmt.Print("    |   Adding component commands... ")
+	for commandName, commandFunction := range componentCommands {
 		s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			if i.ApplicationCommandData().Name == command.declaration.Name {
-				log.Println("Received Command: " + i.ApplicationCommandData().Name)
-				command.handler(s, i)
+			if i.Type == discordgo.InteractionMessageComponent && strings.HasPrefix(strings.ToLower(i.MessageComponentData().CustomID), strings.ToLower(commandName)) {
+				log.Println("Received Command: " + i.MessageComponentData().CustomID)
+				if execution.IsDead(i.Member.User.ID) {
+					sender.RespondEphemeral(s, i, "https://tenor.com/view/yellow-emoji-no-no-emotiguy-no-no-no-gif-gif-9742000569423889376")
+				} else {
+					commandFunction(s, i)
+				}
 			}
 		})
-		fmt.Println()
-		fmt.Printf("        |   %.0f/100", (float32(i+1) / float32(len(commands)) * 100))
 	}
-	fmt.Println()
 	fmt.Println("Done")
 }
 

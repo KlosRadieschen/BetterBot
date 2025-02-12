@@ -16,8 +16,26 @@ func Respond(s *discordgo.Session, i *discordgo.InteractionCreate, resp string) 
 	})
 }
 
+func RespondEphemeral(s *discordgo.Session, i *discordgo.InteractionCreate, resp string) {
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Flags:   discordgo.MessageFlagsEphemeral,
+			Content: resp,
+		},
+	})
+}
+
 func Followup(s *discordgo.Session, i *discordgo.InteractionCreate, resp string) {
 	s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+		Content: resp,
+	})
+}
+
+func FollowupEphemeral(s *discordgo.Session, i *discordgo.InteractionCreate, resp string) {
+	s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+		Flags:   discordgo.MessageFlagsEphemeral,
 		Content: resp,
 	})
 }
@@ -32,6 +50,15 @@ func RespondError(s *discordgo.Session, i *discordgo.InteractionCreate, errorDes
 func Think(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+	})
+}
+
+func ThinkEphemeral(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Flags: discordgo.MessageFlagsEphemeral,
+		},
 	})
 }
 

@@ -3,6 +3,7 @@ package main
 import (
 	"BetterScorch/ai"
 	"BetterScorch/commands"
+	"BetterScorch/database"
 	"BetterScorch/messages"
 	"BetterScorch/secrets"
 	"fmt"
@@ -12,27 +13,36 @@ import (
 
 func main() {
 	fmt.Println("Commencing startup sequence")
-	fmt.Println("|   Initialising AI package")
-	ai.Init()
 
-	fmt.Println("Initialising session")
+	fmt.Print("|   Initialising AI package... ")
+	ai.Init()
+	fmt.Println("Done")
+
+	fmt.Print("|   Opening database connection... ")
+	database.Connect()
+	fmt.Println("Done")
+
+	fmt.Print("|   Initialising session... ")
 	var err error
 	session, _ := discordgo.New("Bot " + secrets.BotToken)
 	session.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAll)
 
-	session.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
-		fmt.Println("|   Initialising commands package")
-		commands.AddAllCommands(session)
-		session.AddHandler(messages.HandleMessage)
-		fmt.Println("Start successful, beginning log")
-		fmt.Println("---------------------------------------------------")
-	})
+	session.AddHandler(readyHandler)
 	err = session.Open()
 	if err != nil {
 		panic("Couldnt open session")
 	}
+	fmt.Println("Done")
 
 	session.UpdateListeningStatus("the screams of burning PHC pilots")
 
 	<-make(chan struct{})
+}
+
+func readyHandler(s *discordgo.Session, r *discordgo.Ready) {
+	fmt.Println("|   Initialising commands package")
+	commands.AddAllCommands(s)
+	s.AddHandler(messages.HandleMessage)
+	fmt.Println("Start successful, beginning log")
+	fmt.Println("---------------------------------------------------")
 }

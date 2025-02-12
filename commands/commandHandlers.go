@@ -4,12 +4,14 @@ import (
 	"BetterScorch/ai"
 	"BetterScorch/execution"
 	"BetterScorch/messages"
+	"BetterScorch/polls"
 	"BetterScorch/secrets"
 	"BetterScorch/sender"
 	"BetterScorch/webhooks"
 	"fmt"
 	"math/rand"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -23,22 +25,50 @@ func executeHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		sender.RespondError(s, i, "The user is trying to execute a member, but they do not have the permissions to do that (they are a low ranking scum)")
 	} else {
 		sender.Respond(s, i, "Engaging target")
-		execution.Execute(s, i.ApplicationCommandData().TargetID, i.ChannelID, false)
+
+		var target string
+		if i.ApplicationCommandData().TargetID == "" {
+			target = i.ApplicationCommandData().Options[0].UserValue(nil).ID
+		} else {
+			target = i.ApplicationCommandData().TargetID
+		}
+
+		execution.Execute(s, target, i.ChannelID, false)
 	}
 }
 
 func reviveHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	targetID := i.ApplicationCommandData().TargetID
-	if !execution.IsDead(targetID) && !isHC(i.Member) {
+	var target string
+	if i.ApplicationCommandData().TargetID == "" {
+		target = i.ApplicationCommandData().Options[0].UserValue(nil).ID
+	} else {
+		target = i.ApplicationCommandData().TargetID
+	}
+
+	if !execution.IsDead(target) && !isHC(i.Member) {
 		sender.RespondError(s, i, "The user is trying to revive an \"executed\" member, but the target is not even executed AND even if the target was downed, they do not even have the permissions to revive (they are a low ranking scum)")
-	} else if !execution.IsDead(targetID) {
+	} else if !execution.IsDead(target) {
 		sender.RespondError(s, i, "The user is trying to revive an \"executed\" member, but the target is not even executed")
-	} else if !execution.IsSacrificed(targetID) && !isHC(i.Member) {
+	} else if !execution.IsSacrificed(target) && !isHC(i.Member) {
 		sender.RespondError(s, i, "The user is trying to revive an executed member, but they do not have the permissions to do that (they are a low ranking scum)")
 	} else {
 		sender.Respond(s, i, "Commencing revive sequence")
 		execution.Revive(s, i.ApplicationCommandData().TargetID, i.ChannelID)
 	}
+}
+
+func pollHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	sender.Think(s, i)
+	var pollOptions []string
+	for _, option := range i.Interaction.ApplicationCommandData().Options[3:] {
+		pollOptions = append(pollOptions, option.StringValue())
+	}
+
+	endTime := time.Now().Add(time.Duration(i.Interaction.ApplicationCommandData().Options[2].IntValue()) * time.Minute)
+
+	pollID := polls.CreatePoll(s, i.Member.User.ID, i.Interaction.ApplicationCommandData().Options[1].BoolValue(), endTime, i.Interaction.ApplicationCommandData().Options[0].StringValue(), pollOptions...)
+	sender.Followup(s, i, "Poll created")
+	polls.WaitAndEvaluate(s, pollID, endTime)
 }
 
 func toggleSleepHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {

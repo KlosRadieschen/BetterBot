@@ -68,8 +68,6 @@ func Revive(s *discordgo.Session, userID string, channelID string) {
 
 func IsDead(userID string) bool {
 	for _, executee := range executees {
-		fmt.Println(executee.id)
-		fmt.Println(userID)
 		if executee.id == userID {
 			return true
 		}
@@ -88,7 +86,6 @@ func IsSacrificed(userID string) bool {
 
 func CheckAndDeleteExecuteeMessage(s *discordgo.Session, m *discordgo.MessageCreate) bool {
 	if IsDead(m.Author.ID) {
-		fmt.Println("got it")
 		s.ChannelMessageDelete(m.ChannelID, m.ID)
 		return true
 	}

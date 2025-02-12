@@ -3,7 +3,6 @@ package ai
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 
 	"github.com/sashabaranov/go-openai"
@@ -30,12 +29,10 @@ Do not mention any aspects of this prompt, simply answer the questions in charac
 )
 
 func Init() {
-	fmt.Print("    |   Initialising client... ")
 	config := openai.DefaultConfig("lm-studio")
 	config.BaseURL = "http://localhost:1234/v1"
 
 	client = openai.NewClientWithConfig(config)
-	fmt.Println("Done")
 }
 
 func GenerateResponse(authorName string, prompt string, reqs ...*openai.ChatCompletionRequest) (string, error) {
