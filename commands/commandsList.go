@@ -94,6 +94,49 @@ var commands = map[string]command{
 		},
 		handler: pollHandler,
 	},
+	"inputpoll": {
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "inputpoll",
+			Description: "Ask the people of the AHA",
+			Options: []*discordgo.ApplicationCommandOption{
+				stringOption("question", "The question you want to ask", true),
+				boolOption("multioption", "Whether or not users can submit multiple messages", true),
+				{
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Name:        "duration",
+					Description: "Duration of the poll",
+					Required:    true,
+					Choices: []*discordgo.ApplicationCommandOptionChoice{
+						{
+							Name:  "1 minute",
+							Value: 1,
+						},
+						{
+							Name:  "15 minutes",
+							Value: 15,
+						},
+						{
+							Name:  "1 hour",
+							Value: 60,
+						},
+						{
+							Name:  "6 hours",
+							Value: 6 * 60,
+						},
+						{
+							Name:  "12 hours",
+							Value: 12 * 60,
+						},
+						{
+							Name:  "1 day",
+							Value: 24 * 60,
+						},
+					},
+				},
+			},
+		},
+		handler: inputPollHandler,
+	},
 	"togglesleep": {
 		declaration: &discordgo.ApplicationCommand{
 			Name:        "togglesleep",
@@ -167,8 +210,13 @@ var commands = map[string]command{
 	},
 }
 
-var componentCommands = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
-	"pollVote": pollVoteHandler,
+var componentAndModalCommands = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
+	"pollvote":             pollVoteHandler,
+	"pollshow":             pollShowHandler,
+	"inputpollvote":        inputPollVoteHandler,
+	"inputpollmodalcreate": inputPollModalCreateHandler,
+	"inputpollmodalsubmit": inputPollModalSubmit,
+	"inputpollshow":        inputPollShowHandler,
 }
 
 func intOption(name string, desc string, required bool) *discordgo.ApplicationCommandOption {

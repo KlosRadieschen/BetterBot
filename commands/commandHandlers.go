@@ -66,9 +66,19 @@ func pollHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	endTime := time.Now().Add(time.Duration(i.Interaction.ApplicationCommandData().Options[2].IntValue()) * time.Minute)
 
-	pollID := polls.CreatePoll(s, i.Member.User.ID, i.Interaction.ApplicationCommandData().Options[1].BoolValue(), endTime, i.Interaction.ApplicationCommandData().Options[0].StringValue(), pollOptions...)
+	pollID := polls.CreateOptionsPoll(s, i.Member.User.ID, i.Interaction.ApplicationCommandData().Options[1].BoolValue(), endTime, i.Interaction.ApplicationCommandData().Options[0].StringValue(), pollOptions...)
 	sender.Followup(s, i, "Poll created")
 	polls.WaitAndEvaluate(s, pollID, endTime)
+}
+
+func inputPollHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	sender.Think(s, i)
+
+	endTime := time.Now().Add(time.Duration(i.Interaction.ApplicationCommandData().Options[2].IntValue()) * time.Minute)
+
+	pollID := polls.CreateInputPoll(s, i.Member.User.ID, i.Interaction.ApplicationCommandData().Options[1].BoolValue(), endTime, i.Interaction.ApplicationCommandData().Options[0].StringValue())
+	sender.Followup(s, i, "Poll created")
+	polls.WaitAndEvaluateInput(s, pollID, endTime)
 }
 
 func toggleSleepHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {

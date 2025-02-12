@@ -3,9 +3,15 @@ package sender
 import (
 	"BetterScorch/ai"
 	"log"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
+
+func SetResponseTimeout(s *discordgo.Session, i *discordgo.InteractionCreate, duration time.Duration) {
+	time.Sleep(duration)
+	s.InteractionResponseDelete(i.Interaction)
+}
 
 func Respond(s *discordgo.Session, i *discordgo.InteractionCreate, resp string) {
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -33,11 +39,12 @@ func Followup(s *discordgo.Session, i *discordgo.InteractionCreate, resp string)
 	})
 }
 
-func FollowupEphemeral(s *discordgo.Session, i *discordgo.InteractionCreate, resp string) {
+func FollowupEphemeral(s *discordgo.Session, i *discordgo.InteractionCreate, resp string) *discordgo.InteractionCreate {
 	s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 		Flags:   discordgo.MessageFlagsEphemeral,
 		Content: resp,
 	})
+	return i
 }
 
 func RespondError(s *discordgo.Session, i *discordgo.InteractionCreate, errorDescription string) {

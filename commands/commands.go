@@ -40,10 +40,17 @@ func AddAllCommands(s *discordgo.Session) {
 	fmt.Println("Done")
 
 	fmt.Print("    |   Adding component commands... ")
-	for commandName, commandFunction := range componentCommands {
+	for commandName, commandFunction := range componentAndModalCommands {
 		s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			if i.Type == discordgo.InteractionMessageComponent && strings.HasPrefix(strings.ToLower(i.MessageComponentData().CustomID), strings.ToLower(commandName)) {
 				log.Println("Received Command: " + i.MessageComponentData().CustomID)
+				if execution.IsDead(i.Member.User.ID) {
+					sender.RespondEphemeral(s, i, "https://tenor.com/view/yellow-emoji-no-no-emotiguy-no-no-no-gif-gif-9742000569423889376")
+				} else {
+					commandFunction(s, i)
+				}
+			} else if i.Type == discordgo.InteractionModalSubmit && strings.ToLower(i.ModalSubmitData().CustomID) == strings.ToLower(commandName) {
+				log.Println("Received Command: " + i.ModalSubmitData().CustomID)
 				if execution.IsDead(i.Member.User.ID) {
 					sender.RespondEphemeral(s, i, "https://tenor.com/view/yellow-emoji-no-no-emotiguy-no-no-no-gif-gif-9742000569423889376")
 				} else {
