@@ -240,8 +240,9 @@ func GetAllVotesEmbeds(s *discordgo.Session, pollID string) ([]*discordgo.Messag
 	embeds := []*discordgo.MessageEmbed{}
 
 	for i := range len(optionPolls[pollID].votes) {
-		if 
-		embeds = append(embeds, &discordgo.MessageEmbed{Title: emojis[i], Color: 0x3498db})
+		if optionPolls[pollID].votes[i] != 0 {
+			embeds = append(embeds, &discordgo.MessageEmbed{Title: emojis[i], Color: 0x3498db})
+		}
 	}
 
 	for i := range optionPolls[pollID].votes {
