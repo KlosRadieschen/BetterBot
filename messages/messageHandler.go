@@ -48,9 +48,13 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 func handleAIResponses(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Type == 19 && m.ReferencedMessage.Author.ID == "1196526025211904110" || regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta("scorch"))).FindStringSubmatch(strings.ToLower(m.Content)) != nil {
+		s.ChannelTyping(m.ChannelID)
 		resp, err := ai.GenerateResponse(m.Member.Nick, m.Content)
 		if !sender.HandleErr(s, m.ChannelID, err) {
 			sender.SendReply(s, m, resp)
+			if strings.Contains(strings.ToUpper(resp), "AND THY PUNISHMENT IS DEATH") {
+				execution.Execute(s, m.Author.ID, m.ChannelID, false)
+			}
 		}
 	}
 }

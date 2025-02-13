@@ -10,10 +10,18 @@ import (
 var webhook *discordgo.Webhook
 
 func InitWebhook(s *discordgo.Session) {
-	webhook, _ = s.WebhookCreate("1195135473643958316", "Scorch", "https://media.sketchfab.com/models/be06a067516e4084bda252f2bb8ed008/thumbnails/485c890fd0354081b28001171695ecaa/22a61b89d3d44964be605a360e77c4c3.jpeg")
+	var err error
+	webhook, err = s.Webhook("1339582520110481429")
+	if err != nil {
+		panic(err)
+	}
 }
 
 func SendPersonalityMessage(s *discordgo.Session, channelID string, msg string, name string, pfpLink string, req *openai.ChatCompletionRequest) {
+	if webhook.ChannelID != channelID {
+		s.WebhookEdit(webhook.ID, webhook.Name, webhook.Avatar, channelID)
+	}
+
 	_, err := s.WebhookExecute(webhook.ID, webhook.Token, false, &discordgo.WebhookParams{
 		Username:  name,
 		Content:   msg,
@@ -23,6 +31,10 @@ func SendPersonalityMessage(s *discordgo.Session, channelID string, msg string, 
 }
 
 func SendPersonalityReply(s *discordgo.Session, m *discordgo.MessageCreate, msg string, name string, pfpLink string, req *openai.ChatCompletionRequest) {
+	if webhook.ChannelID != m.ChannelID {
+		s.WebhookEdit(webhook.ID, webhook.Name, webhook.Avatar, m.ChannelID)
+	}
+
 	_, err := s.WebhookExecute(webhook.ID, webhook.Token, false, &discordgo.WebhookParams{
 		Content: fmt.Sprintf("> [Replying to](https://discord.com/channels/@me/%v/%v): %v\n\n%v",
 			m.ChannelID,

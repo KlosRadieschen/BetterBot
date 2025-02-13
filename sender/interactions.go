@@ -24,7 +24,6 @@ func Respond(s *discordgo.Session, i *discordgo.InteractionCreate, resp string) 
 
 func RespondEphemeral(s *discordgo.Session, i *discordgo.InteractionCreate, resp string) {
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Flags:   discordgo.MessageFlagsEphemeral,

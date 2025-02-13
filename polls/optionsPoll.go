@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -16,9 +17,10 @@ type optionPoll struct {
 	multioption bool
 }
 
-const pollChannelID = "1203821534175825942"
+const pollChannelID = "1196943729387372634"
 
 var optionPolls = make(map[string]*optionPoll)
+var PollMutex sync.Mutex
 
 func CreateOptionsPoll(s *discordgo.Session, creatorID string, multioption bool, endTime time.Time, question string, options ...string) string {
 	emojis := []string{"🔥", "🍷", "💀", "👻", "🎶"}
@@ -240,9 +242,7 @@ func GetAllVotesEmbeds(s *discordgo.Session, pollID string) ([]*discordgo.Messag
 	embeds := []*discordgo.MessageEmbed{}
 
 	for i := range len(optionPolls[pollID].votes) {
-		if optionPolls[pollID].votes[i] != 0 {
-			embeds = append(embeds, &discordgo.MessageEmbed{Title: emojis[i], Color: 0x3498db})
-		}
+		embeds = append(embeds, &discordgo.MessageEmbed{Title: emojis[i], Color: 0x3498db})
 	}
 
 	for i := range optionPolls[pollID].votes {
@@ -251,6 +251,12 @@ func GetAllVotesEmbeds(s *discordgo.Session, pollID string) ([]*discordgo.Messag
 				member, _ := s.GuildMember(secrets.GuildID, voter)
 				embeds[i].Fields = append(embeds[i].Fields, &discordgo.MessageEmbedField{Name: member.Nick})
 			}
+		}
+	}
+
+	for i, embed := range embeds {
+		if len(embed.Fields) == 0 {
+			embeds = append(embeds[:i], embeds[i+1:]...)
 		}
 	}
 

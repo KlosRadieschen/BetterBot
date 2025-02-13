@@ -53,7 +53,7 @@ func reviveHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		sender.RespondError(s, i, "The user is trying to revive an executed member, but they do not have the permissions to do that (they are a low ranking scum)")
 	} else {
 		sender.Respond(s, i, "Commencing revive sequence")
-		execution.Revive(s, i.ApplicationCommandData().TargetID, i.ChannelID)
+		execution.Revive(s, target, i.ChannelID)
 	}
 }
 

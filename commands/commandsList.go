@@ -51,7 +51,13 @@ var commands = map[string]command{
 			Name:        "poll",
 			Description: "Ask the people of the AHA",
 			Options: []*discordgo.ApplicationCommandOption{
-				stringOption("question", "The question you want to ask", true),
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "question",
+					Description: "The question you want to ask",
+					Required:    true,
+					MaxLength:   120,
+				},
 				boolOption("multi-option", "Whether or not users can vote for multiple options", true),
 				{
 					Type:        discordgo.ApplicationCommandOptionInteger,

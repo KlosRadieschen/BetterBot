@@ -47,7 +47,7 @@ func CreateInputPoll(s *discordgo.Session, creatorID string, multioption bool, e
 				Components: []discordgo.MessageComponent{
 					discordgo.Button{
 						CustomID: "inputpollshow",
-						Label:    "Show votes",
+						Label:    "Show responses",
 						Style:    discordgo.SuccessButton,
 					},
 				},
