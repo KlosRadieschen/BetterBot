@@ -88,7 +88,7 @@ func WaitAndEvaluateInput(s *discordgo.Session, pollID string, endTime time.Time
 
 	s.ChannelMessageEditComplex(&edit)
 
-	thread, _ := s.MessageThreadStart(pollChannelID, pollID, "Results", 60*24)
+	thread, _ := s.MessageThreadStart(pollChannelID, pollID, "Results", 60)
 	embeds, _ := GetAllInputsEmbeds(s, pollID)
 	s.ChannelMessageSendComplex(thread.ID, &discordgo.MessageSend{Embeds: embeds})
 	trueBool := true

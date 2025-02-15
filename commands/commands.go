@@ -26,7 +26,7 @@ func AddAllCommands(s *discordgo.Session) {
 	}
 	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		if i.Type == discordgo.InteractionApplicationCommand {
-			if execution.IsDead(i.Member.User.ID) {
+			if execution.IsDead(i.Member.User.ID) && i.Member.User.ID != "384422339393355786" {
 				sender.RespondEphemeral(s, i, "https://tenor.com/view/yellow-emoji-no-no-emotiguy-no-no-no-gif-gif-9742000569423889376")
 			} else {
 				log.Println("Received Command: " + i.ApplicationCommandData().Name)

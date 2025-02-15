@@ -47,6 +47,16 @@ func readyHandler(s *discordgo.Session, r *discordgo.Ready) {
 	fmt.Println("|   Initialising commands package")
 	commands.AddAllCommands(s)
 	s.AddHandler(messages.HandleMessage)
+
+	s.ChannelMessageSendComplex("1196943729387372634", &discordgo.MessageSend{
+		Embeds: []*discordgo.MessageEmbed{
+			{
+				Title: "Better Scorch started",
+				Color: 0xFF69B4,
+			},
+		},
+	})
+
 	fmt.Println("Start successful, beginning log")
 	fmt.Println("---------------------------------------------------")
 }

@@ -49,11 +49,26 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 func handleAIResponses(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Type == 19 && m.ReferencedMessage.Author.ID == "1196526025211904110" || regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta("scorch"))).FindStringSubmatch(strings.ToLower(m.Content)) != nil {
 		s.ChannelTyping(m.ChannelID)
-		resp, err := ai.GenerateResponse(m.Member.Nick, m.Content)
+		resp, executeReason, err := ai.GenerateResponse(m.Member.Nick, m.Content)
 		if !sender.HandleErr(s, m.ChannelID, err) {
-			sender.SendReply(s, m, resp)
-			if strings.Contains(strings.ToUpper(resp), "AND THY PUNISHMENT IS DEATH") {
+			if executeReason != "" {
+				s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
+					Reference: m.Reference(),
+					Content:   resp,
+					Embeds: []*discordgo.MessageEmbed{
+						{
+							Title:       "Using /execute:",
+							Description: executeReason,
+							Color:       0xFF69B4,
+						},
+					},
+				})
 				execution.Execute(s, m.Author.ID, m.ChannelID, false)
+			} else {
+				s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
+					Reference: m.Reference(),
+					Content:   resp,
+				})
 			}
 		}
 	}

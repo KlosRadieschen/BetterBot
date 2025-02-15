@@ -17,7 +17,7 @@ type optionPoll struct {
 	multioption bool
 }
 
-const pollChannelID = "1196943729387372634"
+const pollChannelID = "1203821534175825942"
 
 var optionPolls = make(map[string]*optionPoll)
 var PollMutex sync.Mutex
@@ -79,7 +79,8 @@ func WaitAndEvaluate(s *discordgo.Session, pollID string, endTime time.Time) {
 	time.Sleep(endTime.Sub(time.Now()))
 	updatePollMessage(s, pollID, true)
 
-	thread, _ := s.MessageThreadStart(pollChannelID, pollID, "Results", 60*24)
+	thread, err := s.MessageThreadStart(pollChannelID, pollID, "Results", 60)
+	fmt.Println(err)
 	allVotes, _ := GetAllVotesEmbeds(s, pollID)
 	s.ChannelMessageSendComplex(thread.ID, &discordgo.MessageSend{Embeds: allVotes})
 	trueBool := true
@@ -254,13 +255,14 @@ func GetAllVotesEmbeds(s *discordgo.Session, pollID string) ([]*discordgo.Messag
 		}
 	}
 
-	for i, embed := range embeds {
-		if len(embed.Fields) == 0 {
-			embeds = append(embeds[:i], embeds[i+1:]...)
+	var filteredEmbeds []*discordgo.MessageEmbed
+	for _, embed := range embeds {
+		if embed.Fields != nil {
+			filteredEmbeds = append(filteredEmbeds, embed)
 		}
 	}
 
-	return embeds, nil
+	return filteredEmbeds, nil
 }
 
 func GetVotesSum(pollID string) int {
