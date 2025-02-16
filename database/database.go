@@ -19,7 +19,7 @@ type DBValue struct {
 var db *sql.DB
 
 func Connect() {
-	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s", secrets.DBAddress, secrets.DBPassword, secrets.DBAddress, secrets.DBName)
+	dsn := fmt.Sprintf("%v:%v@tcp(%v:3306)/%v", secrets.DBUser, secrets.DBPassword, secrets.DBAddress, secrets.DBName)
 	var err error
 	db, err = sql.Open("mysql", dsn)
 	if err != nil {
@@ -38,11 +38,13 @@ func Insert(table string, values ...*DBValue) error {
 		return err
 	}
 
+	fmt.Println(values)
+
 	query := fmt.Sprintf(
-		"INSERT INTO %s (%s) VALUES (%s)",
+		"INSERT INTO `%s`(%s) VALUES (%s)",
 		table,
 		strings.Join(getDBValueNames(values), ", "),
-		strings.Repeat("?,", len(values)),
+		strings.TrimSuffix(strings.Repeat("?,", len(values)), ","),
 	)
 
 	log.Println(fmt.Sprintf("Executing query: %v", query))
@@ -53,7 +55,7 @@ func Insert(table string, values ...*DBValue) error {
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(getDBValues(values))
+	_, err = stmt.Exec(stringsToAnys(getDBValues(values))...)
 	if err != nil {
 		return err
 	}
@@ -142,4 +144,12 @@ func getUpdateSetClause(dbVals []*DBValue) []string {
 	}
 
 	return setClause
+}
+
+func stringsToAnys(strings []string) []interface{} {
+	result := make([]interface{}, len(strings))
+	for i, v := range strings {
+		result[i] = v
+	}
+	return result
 }
