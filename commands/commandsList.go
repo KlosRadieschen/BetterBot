@@ -244,6 +244,23 @@ var commands = map[string]command{
 		},
 		handler: linkHandler,
 	},
+	"addcharacter": {
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "addcharacter",
+			Description: "Add a new tupper-like character",
+			Options: []*discordgo.ApplicationCommandOption{
+				stringOption("name", "Name of the character", true),
+				stringOption("brackets", "Define the trigger for the character", true),
+				{
+					Type:        discordgo.ApplicationCommandOptionAttachment,
+					Name:        "pfp",
+					Description: "Profile picture of the character",
+					Required:    true,
+				},
+			},
+		},
+		handler: addCharacterHandler,
+	},
 }
 
 var componentAndModalCommands = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){

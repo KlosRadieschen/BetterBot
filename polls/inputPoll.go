@@ -56,6 +56,7 @@ func CreateInputPoll(s *discordgo.Session, creatorID string, multioption bool, e
 	})
 
 	inputPolls[pollMsg.ID] = &inputPoll{votes: make(map[string][]string), multioption: multioption}
+	s.MessageThreadStart(pollChannelID, pollMsg.ID, "Discussion", 60)
 
 	return pollMsg.ID
 }

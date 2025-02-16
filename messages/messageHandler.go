@@ -27,7 +27,7 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 		Msgs[m.Author.ID] = list.New()
 	}
 	Msgs[m.Author.ID].PushBack(m.Message)
-	if Msgs[m.Author.ID].Len() > 10 {
+	if Msgs[m.Author.ID].Len() > 5 {
 		Msgs[m.Author.ID].Remove(Msgs[m.Author.ID].Front())
 	}
 

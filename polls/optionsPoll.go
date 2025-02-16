@@ -71,6 +71,7 @@ func CreateOptionsPoll(s *discordgo.Session, creatorID string, multioption bool,
 	})
 
 	optionPolls[pollMsg.ID] = &optionPoll{votes: votes, voters: make(map[string][]int), multioption: multioption}
+	s.MessageThreadStart(pollChannelID, pollMsg.ID, "Discussion", 60)
 
 	return pollMsg.ID
 }

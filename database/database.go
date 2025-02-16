@@ -12,8 +12,8 @@ import (
 )
 
 type DBValue struct {
-	name  string
-	value string
+	Name  string
+	Value string
 }
 
 var db *sql.DB
@@ -32,7 +32,7 @@ func Connect() {
 	db.SetConnMaxLifetime(time.Hour * 2) // Connections are recycled after two hours.
 }
 
-func Insert(table string, values ...DBValue) error {
+func Insert(table string, values ...*DBValue) error {
 	err := db.Ping()
 	if err != nil {
 		return err
@@ -61,7 +61,7 @@ func Insert(table string, values ...DBValue) error {
 	return nil
 }
 
-func Update(table string, keyValue *DBValue, values ...DBValue) error {
+func Update(table string, keyValue *DBValue, values ...*DBValue) error {
 	err := db.Ping()
 	if err != nil {
 		return err
@@ -72,7 +72,7 @@ func Update(table string, keyValue *DBValue, values ...DBValue) error {
 		"UPDATE %s SET %s WHERE %s=?",
 		table,
 		setClause,
-		keyValue.name,
+		keyValue.Name,
 	)
 
 	log.Println(fmt.Sprintf("Executing query: %v", query))
@@ -83,7 +83,7 @@ func Update(table string, keyValue *DBValue, values ...DBValue) error {
 	}
 	defer stmt.Close()
 
-	args := append(getDBValues(values), keyValue.value)
+	args := append(getDBValues(values), keyValue.Value)
 	_, err = stmt.Exec(args)
 	if err != nil {
 		return err
@@ -98,7 +98,7 @@ func Remove(table string, keyValue *DBValue) error {
 		return err
 	}
 
-	log.Println(fmt.Sprintf("Executing query: DELETE FROM %v WHERE %v=%v", table, keyValue.name, keyValue.value))
+	log.Println(fmt.Sprintf("Executing query: DELETE FROM %v WHERE %v=%v", table, keyValue.Name, keyValue.Value))
 
 	stmt, err := db.Prepare("DELETE FROM ? WHERE ?=?")
 	if err != nil {
@@ -106,7 +106,7 @@ func Remove(table string, keyValue *DBValue) error {
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(table, keyValue.name, keyValue.value)
+	_, err = stmt.Exec(table, keyValue.Name, keyValue.Value)
 	if err != nil {
 		return err
 	}
@@ -114,31 +114,31 @@ func Remove(table string, keyValue *DBValue) error {
 	return nil
 }
 
-func getDBValues(dbVals []DBValue) []string {
+func getDBValues(dbVals []*DBValue) []string {
 	var values []string
 
 	for _, dv := range dbVals {
-		values = append(values, dv.value)
+		values = append(values, dv.Value)
 	}
 
 	return values
 }
 
-func getDBValueNames(dbVals []DBValue) []string {
+func getDBValueNames(dbVals []*DBValue) []string {
 	var names []string
 
 	for _, dv := range dbVals {
-		names = append(names, dv.name)
+		names = append(names, dv.Name)
 	}
 
 	return names
 }
 
-func getUpdateSetClause(dbVals []DBValue) []string {
+func getUpdateSetClause(dbVals []*DBValue) []string {
 	var setClause []string
 
 	for _, dv := range dbVals {
-		setClause = append(setClause, fmt.Sprintf("%s=?", dv.name))
+		setClause = append(setClause, fmt.Sprintf("%s=?", dv.Name))
 	}
 
 	return setClause

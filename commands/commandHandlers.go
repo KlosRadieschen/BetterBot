@@ -191,3 +191,18 @@ func linkHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		sender.Followup(s, i, resp)
 	}
 }
+
+func addCharacterHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	test := i.ApplicationCommandData().Options[1]
+	fmt.Println(test.Value)
+
+	err := webhooks.AddCharacter(webhooks.Character{
+		OwnerID:    i.Member.User.ID,
+		Name:       i.ApplicationCommandData().Options[0].StringValue(),
+		Brackets:   i.ApplicationCommandData().Options[1].StringValue(),
+		AvatarLink: "",
+	})
+	if !sender.HandleErrInteraction(s, i, err) {
+		sender.Respond(s, i, "Character created")
+	}
+}
