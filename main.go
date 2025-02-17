@@ -7,6 +7,7 @@ import (
 	"BetterScorch/messages"
 	"BetterScorch/secrets"
 	"BetterScorch/sender"
+	"BetterScorch/webhooks"
 	"fmt"
 
 	"github.com/bwmarrin/discordgo"
@@ -41,9 +42,14 @@ func main() {
 }
 
 func readyHandler(s *discordgo.Session, r *discordgo.Ready) {
-	fmt.Print("|   Initialising webhook... ")
+	fmt.Println("|   Initialising webhooks")
+	fmt.Print("    |   Loading Scorch webhook... ")
 	sender.InitWebhook(s)
 	fmt.Println("Done")
+	fmt.Print("    |   Loading characters... ")
+	webhooks.RetrieveCharacters()
+	fmt.Println("Done")
+
 	fmt.Println("|   Initialising commands package")
 	commands.AddAllCommands(s)
 	s.AddHandler(messages.HandleMessage)

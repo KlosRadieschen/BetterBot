@@ -41,17 +41,62 @@ func CheckAndUseCharacters(s *discordgo.Session, m *discordgo.MessageCreate) err
 			cleaned, err := extractTupperContent(m.Content, character.Brackets)
 			if err != nil {
 				return err
+			} else if m.MessageReference != nil {
+				sender.SendCharacterReply(s, m, cleaned, character.Name, character.AvatarLink)
+			} else {
+				sender.SendCharacterMessage(s, m, cleaned, character.Name, character.AvatarLink)
 			}
-			sender.SendCharacterMessage(s, m, cleaned, character.Name, character.AvatarLink)
 		}
 	}
 
 	return nil
 }
 
-func RemoveCharacter(character string) error {
-	// Implementation goes here
-	return nil
+func RetrieveCharacters() {
+	// Reset/clear the buffer first to ensure clean state
+	characterBuffer = make(map[string][]Character)
+
+	// Get all characters from persistent storage
+	characters, err := database.GetAll("Character")
+	if err != nil {
+		panic(err)
+	}
+
+	// Rebuild the buffer from database records
+	for _, row := range characters {
+		char := Character{
+			OwnerID:    row[0], // ownerID
+			Name:       row[1], // name
+			AvatarLink: row[2], // avatar
+			Brackets:   row[3], // brackets
+		}
+		characterBuffer[char.OwnerID] = append(characterBuffer[char.OwnerID], char)
+	}
+}
+
+func RemoveCharacter(userID string, characterName string) error {
+	values := []*database.DBValue{
+		{
+			Name:  "pk_ownerID",
+			Value: userID,
+		},
+		{
+			Name:  "name",
+			Value: characterName,
+		},
+	}
+
+	err := database.Remove("Character", values...)
+	return err
+}
+
+// List all characters owned by the user from characterBuffer
+func ListCharacters(userID string) ([]Character, error) {
+	if characters, ok := characterBuffer[userID]; ok {
+		return characters, nil
+	}
+
+	return nil, errors.New("user has no characters")
 }
 
 // matchesTupperPattern returns true if the message follows the bracket template pattern.

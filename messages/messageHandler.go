@@ -31,9 +31,9 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 		Msgs[m.Author.ID].Remove(Msgs[m.Author.ID].Front())
 	}
 
-	webhooks.CheckAndUseCharacters(s, m)
-	webhooks.CheckAndRespondPersonalities(s, m)
-	handleAIResponses(s, m)
+	go webhooks.CheckAndUseCharacters(s, m)
+	go webhooks.CheckAndRespondPersonalities(s, m)
+	go handleAIResponses(s, m)
 
 	for _, response := range responses {
 		for _, trigger := range response.triggers {

@@ -63,6 +63,39 @@ func Insert(table string, values ...*DBValue) error {
 	return nil
 }
 
+func GetAll(table string) ([][]string, error) {
+	err := db.Ping()
+	if err != nil {
+		return nil, err
+	}
+
+	query := fmt.Sprintf("SELECT * FROM `%s`", table)
+	log.Println(fmt.Sprintf("Executing query: %v", query))
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results [][]string
+
+	for rows.Next() {
+		var ownerID, name, avatar, brackets string
+		if err := rows.Scan(&ownerID, &name, &avatar, &brackets); err != nil {
+			return nil, err
+		}
+		row := []string{ownerID, name, avatar, brackets}
+		results = append(results, row)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
+
 func Update(table string, keyValue *DBValue, values ...*DBValue) error {
 	err := db.Ping()
 	if err != nil {
@@ -94,21 +127,31 @@ func Update(table string, keyValue *DBValue, values ...*DBValue) error {
 	return nil
 }
 
-func Remove(table string, keyValue *DBValue) error {
+func Remove(table string, conditions ...*DBValue) error {
 	err := db.Ping()
 	if err != nil {
 		return err
 	}
 
-	log.Println(fmt.Sprintf("Executing query: DELETE FROM %v WHERE %v=%v", table, keyValue.Name, keyValue.Value))
+	// Build WHERE clause
+	whereConditions := make([]string, len(conditions))
+	values := make([]interface{}, len(conditions))
+	for i, condition := range conditions {
+		whereConditions[i] = fmt.Sprintf("`%s` = ?", condition.Name)
+		values[i] = condition.Value
+	}
+	whereClause := strings.Join(whereConditions, " AND ")
 
-	stmt, err := db.Prepare("DELETE FROM ? WHERE ?=?")
+	query := fmt.Sprintf("DELETE FROM `%s` WHERE %s", table, whereClause)
+	log.Println(fmt.Sprintf("Executing query: %s", query))
+
+	stmt, err := db.Prepare(query)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(table, keyValue.Name, keyValue.Value)
+	_, err = stmt.Exec(values...)
 	if err != nil {
 		return err
 	}

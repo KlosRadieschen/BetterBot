@@ -261,6 +261,23 @@ var commands = map[string]command{
 		},
 		handler: addCharacterHandler,
 	},
+	"removecharacter": {
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "removecharacter",
+			Description: "Remove one of yourcharacter",
+			Options: []*discordgo.ApplicationCommandOption{
+				stringOption("name", "Name of the character", true),
+			},
+		},
+		handler: removeCharacterHandler,
+	},
+	"listcharacters": {
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "listcharacters",
+			Description: "List all your characters",
+		},
+		handler: listCharactersHandler,
+	},
 }
 
 var componentAndModalCommands = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){

@@ -1,6 +1,7 @@
 package sender
 
 import (
+	"BetterScorch/secrets"
 	"fmt"
 
 	"github.com/bwmarrin/discordgo"
@@ -24,6 +25,34 @@ func SendCharacterMessage(s *discordgo.Session, m *discordgo.MessageCreate, clea
 
 	_, err := s.WebhookExecute(webhook.ID, webhook.Token, false, &discordgo.WebhookParams{
 		Content:     cleanedMessage,
+		Username:    name,
+		AvatarURL:   avatar,
+		Attachments: m.Attachments,
+	})
+	HandleErr(s, m.ChannelID, err)
+}
+
+func SendCharacterReply(s *discordgo.Session, m *discordgo.MessageCreate, cleanedMessage string, name string, avatar string) {
+	if webhook.ChannelID != m.ChannelID {
+		s.WebhookEdit(webhook.ID, webhook.Name, webhook.Avatar, m.ChannelID)
+	}
+
+	var refName string
+	msg, err := s.ChannelMessage(m.Reference().ChannelID, m.ReferencedMessage.ID)
+	member, err := s.GuildMember(secrets.GuildID, msg.Author.ID)
+	if err != nil {
+		refName = msg.Author.Username
+	} else {
+		refName = member.Nick
+	}
+
+	_, err = s.WebhookExecute(webhook.ID, webhook.Token, false, &discordgo.WebhookParams{
+		Content: fmt.Sprintf("> [Replying to](https://discord.com/channels/@me/%v/%v): %v\n\n%v",
+			msg.ChannelID,
+			msg.ID,
+			refName,
+			cleanedMessage,
+		),
 		Username:    name,
 		AvatarURL:   avatar,
 		Attachments: m.Attachments,

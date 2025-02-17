@@ -71,21 +71,18 @@ func CreateOptionsPoll(s *discordgo.Session, creatorID string, multioption bool,
 	})
 
 	optionPolls[pollMsg.ID] = &optionPoll{votes: votes, voters: make(map[string][]int), multioption: multioption}
-	s.MessageThreadStart(pollChannelID, pollMsg.ID, "Discussion", 60)
 
 	return pollMsg.ID
 }
 
 func WaitAndEvaluate(s *discordgo.Session, pollID string, endTime time.Time) {
+	thread, _ := s.MessageThreadStart(pollChannelID, pollID, "Discussion", 60)
 	time.Sleep(endTime.Sub(time.Now()))
 	updatePollMessage(s, pollID, true)
 
-	thread, err := s.MessageThreadStart(pollChannelID, pollID, "Results", 60)
-	fmt.Println(err)
 	allVotes, _ := GetAllVotesEmbeds(s, pollID)
 	s.ChannelMessageSendComplex(thread.ID, &discordgo.MessageSend{Embeds: allVotes})
-	trueBool := true
-	s.ChannelEdit(thread.ID, &discordgo.ChannelEdit{Locked: &trueBool})
+	s.ChannelEdit(thread.ID, &discordgo.ChannelEdit{Name: "Results"})
 
 	optionPolls[pollID] = nil
 }

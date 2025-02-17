@@ -1,6 +1,6 @@
 module BetterScorch
 
-go 1.24
+go 1.22.12
 
 require (
 	github.com/bwmarrin/discordgo v0.28.1

@@ -56,7 +56,6 @@ func CreateInputPoll(s *discordgo.Session, creatorID string, multioption bool, e
 	})
 
 	inputPolls[pollMsg.ID] = &inputPoll{votes: make(map[string][]string), multioption: multioption}
-	s.MessageThreadStart(pollChannelID, pollMsg.ID, "Discussion", 60)
 
 	return pollMsg.ID
 }
@@ -76,6 +75,7 @@ func SubmitInputPollResponse(s *discordgo.Session, id string, voterID string, re
 }
 
 func WaitAndEvaluateInput(s *discordgo.Session, pollID string, endTime time.Time) {
+	thread, _ := s.MessageThreadStart(pollChannelID, pollID, "Discussion", 60)
 	time.Sleep(endTime.Sub(time.Now()))
 
 	poll, _ := s.ChannelMessage(pollChannelID, pollID)
@@ -89,11 +89,11 @@ func WaitAndEvaluateInput(s *discordgo.Session, pollID string, endTime time.Time
 
 	s.ChannelMessageEditComplex(&edit)
 
-	thread, _ := s.MessageThreadStart(pollChannelID, pollID, "Results", 60)
 	embeds, _ := GetAllInputsEmbeds(s, pollID)
 	s.ChannelMessageSendComplex(thread.ID, &discordgo.MessageSend{Embeds: embeds})
-	trueBool := true
-	s.ChannelEdit(thread.ID, &discordgo.ChannelEdit{Locked: &trueBool})
+	s.ChannelEdit(thread.ID, &discordgo.ChannelEdit{
+		Name: "Results",
+	})
 
 	inputPolls[pollID] = nil
 }
