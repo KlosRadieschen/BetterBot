@@ -278,6 +278,23 @@ var commands = map[string]command{
 		},
 		handler: listCharactersHandler,
 	},
+	"register": {
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "register",
+			Description: "Register yourself into the database",
+			Options: []*discordgo.ApplicationCommandOption{
+				stringOption("full-name", " Full name of your character", true),
+				stringOption("callsign", "Callsign of your character", true),
+				{
+					Type:        discordgo.ApplicationCommandOptionAttachment,
+					Name:        "picture",
+					Description: "Picture of the character",
+					Required:    true,
+				},
+			},
+		},
+		handler: registerHandler,
+	},
 }
 
 var componentAndModalCommands = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){

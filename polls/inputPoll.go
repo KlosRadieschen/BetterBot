@@ -91,9 +91,7 @@ func WaitAndEvaluateInput(s *discordgo.Session, pollID string, endTime time.Time
 
 	embeds, _ := GetAllInputsEmbeds(s, pollID)
 	s.ChannelMessageSendComplex(thread.ID, &discordgo.MessageSend{Embeds: embeds})
-	s.ChannelEdit(thread.ID, &discordgo.ChannelEdit{
-		Name: "Results",
-	})
+	s.ChannelEdit(thread.ID, &discordgo.ChannelEdit{Name: "Results"})
 
 	inputPolls[pollID] = nil
 }

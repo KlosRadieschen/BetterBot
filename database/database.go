@@ -127,10 +127,10 @@ func Update(table string, keyValue *DBValue, values ...*DBValue) error {
 	return nil
 }
 
-func Remove(table string, conditions ...*DBValue) error {
+func Remove(table string, conditions ...*DBValue) (int, error) {
 	err := db.Ping()
 	if err != nil {
-		return err
+		return -1, err
 	}
 
 	// Build WHERE clause
@@ -147,16 +147,21 @@ func Remove(table string, conditions ...*DBValue) error {
 
 	stmt, err := db.Prepare(query)
 	if err != nil {
-		return err
+		return -1, err
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(values...)
+	res, err := stmt.Exec(values...)
 	if err != nil {
-		return err
+		return -1, err
 	}
 
-	return nil
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return -1, err
+	}
+
+	return int(affected), nil
 }
 
 func getDBValues(dbVals []*DBValue) []string {

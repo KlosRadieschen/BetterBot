@@ -17,14 +17,14 @@ import (
 )
 
 func testHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	sender.Respond(s, i, "https://tenor.com/ss1MoenucUm.gif")
+	sender.Respond(s, i, "https://tenor.com/ss1MoenucUm.gif", nil)
 }
 
 func executeHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if !execution.IsSacrificed(i.Member.User.ID) && !isHC(i.Member) {
 		sender.RespondError(s, i, "The user is trying to execute a member, but they do not have the permissions to do that (they are a low ranking scum)")
 	} else {
-		sender.Respond(s, i, "Engaging target")
+		sender.Respond(s, i, "Engaging target", nil)
 
 		var target string
 		if i.ApplicationCommandData().TargetID == "" {
@@ -52,7 +52,7 @@ func reviveHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	} else if !execution.IsSacrificed(target) && !isHC(i.Member) {
 		sender.RespondError(s, i, "The user is trying to revive an executed member, but they do not have the permissions to do that (they are a low ranking scum)")
 	} else {
-		sender.Respond(s, i, "Commencing revive sequence")
+		sender.Respond(s, i, "Commencing revive sequence", nil)
 		execution.Revive(s, target, i.ChannelID)
 	}
 }
@@ -84,17 +84,17 @@ func inputPollHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 func toggleSleepHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	messages.Sleeping = !messages.Sleeping
 	if messages.Sleeping {
-		sender.Respond(s, i, "https://tenor.com/view/ehouarn-sagot-dormir-a-mimir-mimir-gif-2358882822435654411")
+		sender.Respond(s, i, "https://tenor.com/view/ehouarn-sagot-dormir-a-mimir-mimir-gif-2358882822435654411", nil)
 	} else {
-		sender.Respond(s, i, "https://tenor.com/view/wwe-coffin-world-wrestling-entertainment-gif-17903370")
+		sender.Respond(s, i, "https://tenor.com/view/wwe-coffin-world-wrestling-entertainment-gif-17903370", nil)
 	}
 }
 
 func statusHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if messages.Sleeping {
-		sender.Respond(s, i, "https://tenor.com/view/dog-snoring-sleeping-meekotheiggy-knocked-out-gif-23834780")
+		sender.Respond(s, i, "https://tenor.com/view/dog-snoring-sleeping-meekotheiggy-knocked-out-gif-23834780", nil)
 	} else {
-		sender.Respond(s, i, "https://tenor.com/view/funny-gif-15743464119256435424")
+		sender.Respond(s, i, "https://tenor.com/view/funny-gif-15743464119256435424", nil)
 	}
 }
 
@@ -111,7 +111,7 @@ func rollHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		}
 	}
 
-	sender.Respond(s, i, fmt.Sprintf("%v%v/%v", reason, rand.Intn(max)+1, max))
+	sender.Respond(s, i, fmt.Sprintf("%v%v/%v", reason, rand.Intn(max)+1, max), nil)
 }
 
 func addPersonalityHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -142,7 +142,7 @@ func addPersonalityHandler(s *discordgo.Session, i *discordgo.InteractionCreate)
 func killPersonalityHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	name := i.ApplicationCommandData().Options[0].StringValue()
 	if webhooks.PersonalityExists(name) {
-		sender.Respond(s, i, "I'm shooting "+name)
+		sender.Respond(s, i, "I'm shooting "+name, nil)
 		webhooks.RemovePersonality(s, i, name)
 	} else {
 		sender.RespondError(s, i, "The user is trying to remove the AI personality \""+name+"\" but it does not exist")
@@ -153,14 +153,14 @@ func purgeHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if webhooks.PersonalitiesEmpty() {
 		sender.RespondError(s, i, "The user is trying to purge AI personalities but there are currently none")
 	} else {
-		sender.Respond(s, i, "https://tenor.com/view/langley-thanos-gif-20432464")
+		sender.Respond(s, i, "https://tenor.com/view/langley-thanos-gif-20432464", nil)
 		webhooks.Purge(s, i)
 	}
 }
 
 func exposeHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if messages.Msgs[i.ApplicationCommandData().Options[0].UserValue(nil).ID] == nil {
-		sender.Respond(s, i, "User doesn't have any messages")
+		sender.Respond(s, i, "User doesn't have any messages", nil)
 		return
 	}
 
@@ -176,12 +176,7 @@ func exposeHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			Inline: false,
 		})
 	}
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Embeds: []*discordgo.MessageEmbed{&embed},
-		},
-	})
+	sender.Respond(s, i, "", []*discordgo.MessageEmbed{&embed})
 }
 
 func linkHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -191,5 +186,3 @@ func linkHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		sender.Followup(s, i, resp)
 	}
 }
-
-

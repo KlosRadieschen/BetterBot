@@ -13,11 +13,12 @@ func SetResponseTimeout(s *discordgo.Session, i *discordgo.InteractionCreate, du
 	s.InteractionResponseDelete(i.Interaction)
 }
 
-func Respond(s *discordgo.Session, i *discordgo.InteractionCreate, resp string) {
+func Respond(s *discordgo.Session, i *discordgo.InteractionCreate, resp string, embeds []*discordgo.MessageEmbed) {
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Content: resp,
+			Embeds:  embeds,
 		},
 	})
 }

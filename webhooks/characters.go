@@ -5,6 +5,7 @@ import (
 	"BetterScorch/sender"
 	"errors"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -74,7 +75,7 @@ func RetrieveCharacters() {
 	}
 }
 
-func RemoveCharacter(userID string, characterName string) error {
+func RemoveCharacter(userID string, characterName string) (bool, error) {
 	values := []*database.DBValue{
 		{
 			Name:  "pk_ownerID",
@@ -86,17 +87,26 @@ func RemoveCharacter(userID string, characterName string) error {
 		},
 	}
 
-	err := database.Remove("Character", values...)
-	return err
+	affected, err := database.Remove("Character", values...)
+
+	if err != nil {
+		return false, err
+	}
+
+	characterBuffer[userID] = slices.DeleteFunc(characterBuffer[userID], func(c Character) bool {
+		return c.Name == characterName
+	})
+
+	return affected > 0, err
 }
 
 // List all characters owned by the user from characterBuffer
-func ListCharacters(userID string) ([]Character, error) {
+func ListCharacters(userID string) []Character {
 	if characters, ok := characterBuffer[userID]; ok {
-		return characters, nil
+		return characters
 	}
 
-	return nil, errors.New("user has no characters")
+	return []Character{}
 }
 
 // matchesTupperPattern returns true if the message follows the bracket template pattern.

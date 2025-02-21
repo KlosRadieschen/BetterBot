@@ -4,19 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
-	"regexp"
-	"strings"
 
 	"github.com/sashabaranov/go-openai"
 	"github.com/sashabaranov/go-openai/jsonschema"
 )
-
-type ToolCall struct {
-	Name      string            `json:"name"`
-	Arguments map[string]string `json:"arguments"`
-}
 
 var (
 	client    = openai.NewClient("")
@@ -78,13 +70,16 @@ func GenerateResponse(authorName string, prompt string, reqs ...*openai.ChatComp
 	} else {
 		req.Messages = append(req.Messages, resp.Choices[0].Message)
 
-		cleanedResp, tc := extractToolCall(resp.Choices[0].Message.Content)
-		fmt.Println(resp.Choices[0].Message.ToolCalls)
+		if len(resp.Choices[0].Message.ToolCalls) > 0 {
+			var toolCall map[string]string
+			err := json.Unmarshal([]byte(resp.Choices[0].Message.ToolCalls[0].Function.Arguments), &toolCall)
+			if err != nil {
+				log.Fatalf("Error unmarshaling JSON: %v", err)
+			}
 
-		if tc != nil {
-			return cleanedResp, tc.Arguments["reasoning"], nil
+			return resp.Choices[0].Message.Content, toolCall["reasoning"], nil
 		} else {
-			return cleanedResp, "", nil
+			return resp.Choices[0].Message.Content, "", nil
 		}
 	}
 }
@@ -135,32 +130,4 @@ The next message will be description of the error. Use that to write a rant to t
 		req.Messages = append(req.Messages, resp.Choices[0].Message)
 		return resp.Choices[0].Message.Content, nil
 	}
-}
-
-// ExtractToolCall processes messages with tool calls
-func extractToolCall(content string) (string, *ToolCall) {
-	// Regular expression to match "[TOOL_REQUEST] ... [END_TOOL_REQUEST]"
-	re := regexp.MustCompile(`\[TOOL_REQUEST\]\s*(\{.*?\})\s*\[END_TOOL_REQUEST\]`)
-
-	// Find and extract the JSON inside "[TOOL_REQUEST] ... [END_TOOL_REQUEST]"
-	matches := re.FindStringSubmatch(content)
-	hasToolCall := len(matches) > 1
-
-	// Remove the tool request block from content
-	cleanedContent := re.ReplaceAllString(content, "")
-	cleanedContent = strings.TrimSpace(cleanedContent)
-
-	// If no tool call was found, return just the cleaned content
-	if !hasToolCall {
-		return cleanedContent, nil
-	}
-
-	// Parse the extracted JSON into a ToolCall struct
-	var toolCall ToolCall
-	if err := json.Unmarshal([]byte(matches[1]), &toolCall); err != nil {
-		fmt.Println("Error parsing tool call:", err)
-		return cleanedContent, nil
-	}
-
-	return cleanedContent, &toolCall
 }
