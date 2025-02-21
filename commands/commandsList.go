@@ -5,13 +5,12 @@ import (
 )
 
 var commands = map[string]command{
-	"test": {
-		declaration: &discordgo.ApplicationCommand{
-			Name:        "test",
-			Description: "Test if this fucker is online",
-		},
-		handler: testHandler,
-	},
+	/*
+
+		Execute
+
+	*/
+
 	"FUCKING KILL THEM": {
 		declaration: &discordgo.ApplicationCommand{
 			Type: discordgo.UserApplicationCommand,
@@ -46,6 +45,13 @@ var commands = map[string]command{
 		},
 		handler: reviveHandler,
 	},
+
+	/*
+
+		Polls
+
+	*/
+
 	"poll": {
 		declaration: &discordgo.ApplicationCommand{
 			Name:        "poll",
@@ -173,6 +179,13 @@ var commands = map[string]command{
 		},
 		handler: inputPollHandler,
 	},
+
+	/*
+
+		Sleep
+
+	*/
+
 	"togglesleep": {
 		declaration: &discordgo.ApplicationCommand{
 			Name:        "togglesleep",
@@ -187,17 +200,13 @@ var commands = map[string]command{
 		},
 		handler: statusHandler,
 	},
-	"roll": {
-		declaration: &discordgo.ApplicationCommand{
-			Name:        "roll",
-			Description: "Essentially gambling",
-			Options: []*discordgo.ApplicationCommandOption{
-				intOption("max", "The highest number the dice can get (default: 20)", false),
-				stringOption("reason", "What you are rolling for", false),
-			},
-		},
-		handler: rollHandler,
-	},
+
+	/*
+
+		Personality
+
+	*/
+
 	"addpersonality": {
 		declaration: &discordgo.ApplicationCommand{
 			Name:        "addpersonality",
@@ -227,23 +236,13 @@ var commands = map[string]command{
 		},
 		handler: purgeHandler,
 	},
-	"expose": {
-		declaration: &discordgo.ApplicationCommand{
-			Name:        "expose",
-			Description: "Show the target's recent messages",
-			Options: []*discordgo.ApplicationCommandOption{
-				userOption("target", "The target that you want to expose", true),
-			},
-		},
-		handler: exposeHandler,
-	},
-	"link": {
-		declaration: &discordgo.ApplicationCommand{
-			Name:        "link",
-			Description: "Get the link to the website",
-		},
-		handler: linkHandler,
-	},
+
+	/*
+
+		Characters
+
+	*/
+
 	"addcharacter": {
 		declaration: &discordgo.ApplicationCommand{
 			Name:        "addcharacter",
@@ -278,6 +277,13 @@ var commands = map[string]command{
 		},
 		handler: listCharactersHandler,
 	},
+
+	/*
+
+		Register
+
+	*/
+
 	"register": {
 		declaration: &discordgo.ApplicationCommand{
 			Name:        "register",
@@ -294,6 +300,79 @@ var commands = map[string]command{
 			},
 		},
 		handler: registerHandler,
+	},
+	"unregister": {
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "unregister",
+			Description: "Unregister yourself from the database",
+		},
+		handler: unregisterHandler,
+	},
+
+	/*
+
+		Reports
+
+	*/
+
+	"listreports": {
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "listreports",
+			Description: "List all reports",
+		},
+		handler: listReportsHandler,
+	},
+	"getreport": {
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "getreport",
+			Description: "Get a report",
+			Options: []*discordgo.ApplicationCommandOption{
+				stringOption("index", "Index of the report", true),
+			},
+		},
+		handler: getReportHandler,
+	},
+
+	/*
+
+		Miscellaneous
+
+	*/
+
+	"test": {
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "test",
+			Description: "Test if this fucker is online",
+		},
+		handler: testHandler,
+	},
+	"roll": {
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "roll",
+			Description: "Essentially gambling",
+			Options: []*discordgo.ApplicationCommandOption{
+				intOption("max", "The highest number the dice can get (default: 20)", false),
+				stringOption("reason", "What you are rolling for", false),
+			},
+		},
+		handler: rollHandler,
+	},
+	"expose": {
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "expose",
+			Description: "Show the target's recent messages",
+			Options: []*discordgo.ApplicationCommandOption{
+				userOption("target", "The target that you want to expose", true),
+			},
+		},
+		handler: exposeHandler,
+	},
+	"link": {
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "link",
+			Description: "Get the link to the website",
+		},
+		handler: linkHandler,
 	},
 }
 

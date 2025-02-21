@@ -63,6 +63,73 @@ func Insert(table string, values ...*DBValue) error {
 	return nil
 }
 
+func Get(table string, fields []string) ([][]string, error) {
+	err := db.Ping()
+	if err != nil {
+		return nil, err
+	}
+
+	// If no fields specified, use "*" to select all fields
+	fieldsStr := "*"
+	if len(fields) > 0 {
+		// Wrap field names in backticks and join them with commas
+		quotedFields := make([]string, len(fields))
+		for i, field := range fields {
+			quotedFields[i] = fmt.Sprintf("`%s`", field)
+		}
+		fieldsStr = strings.Join(quotedFields, ", ")
+	}
+
+	query := fmt.Sprintf("SELECT %s FROM `%s`", fieldsStr, table)
+	log.Println(fmt.Sprintf("Executing query: %v", query))
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Get column names from the query
+	columns, err := rows.Columns()
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a slice of interface{} to hold the values
+	values := make([]any, len(columns))
+	valuePtrs := make([]any, len(columns))
+	for i := range columns {
+		valuePtrs[i] = &values[i]
+	}
+
+	var results [][]string
+
+	for rows.Next() {
+		// Scan the row into the slice of interface{}
+		err := rows.Scan(valuePtrs...)
+		if err != nil {
+			return nil, err
+		}
+
+		// Convert the row's values to strings
+		row := make([]string, len(columns))
+		for i, val := range values {
+			if val == nil {
+				row[i] = ""
+			} else {
+				row[i] = fmt.Sprintf("%v", val)
+			}
+		}
+		results = append(results, row)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
+
 func GetAll(table string) ([][]string, error) {
 	err := db.Ping()
 	if err != nil {

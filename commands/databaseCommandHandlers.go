@@ -5,10 +5,18 @@ import (
 	"BetterScorch/sender"
 	"BetterScorch/webhooks"
 	"fmt"
+	"math"
+	"strconv"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
+
+/*
+
+Characters
+
+*/
 
 func addCharacterHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	var pfpLink string
@@ -63,6 +71,12 @@ func listCharactersHandler(s *discordgo.Session, i *discordgo.InteractionCreate)
 	sender.Respond(s, i, "", embeds)
 }
 
+/*
+
+Register
+
+*/
+
 func registerHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	var pfpLink string
 	for _, attachment := range i.ApplicationCommandData().Resolved.Attachments {
@@ -105,5 +119,116 @@ func unregisterHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		sender.RespondError(s, i, "User tried to delete himself from the database but never even registered")
 	} else {
 		sender.Respond(s, i, "Removed you from the database", nil)
+	}
+}
+
+/*
+
+REPORTS
+
+*/
+
+func listReportsHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	reports, err := database.GetAll("Report")
+	if !sender.HandleErrInteraction(s, i, err) {
+		if len(reports) == 0 {
+			sender.Respond(s, i, "No results", nil)
+			return
+		}
+
+		var resultString string
+		for _, row := range reports {
+			reportType := row[0]
+			timeIndex, _ := strconv.Atoi(row[1])
+			authorType := row[2]
+			name := row[3]
+
+			timeString := ""
+			if timeIndex < 0 {
+				timeString = fmt.Sprintf("0%v", math.Abs(float64(timeIndex)))
+			} else {
+				timeString = fmt.Sprintf("1%v", timeIndex)
+			}
+			resultString += fmt.Sprintf("- #%v%v%v: %v\n", reportType, timeString, authorType, name)
+		}
+
+		if len(resultString) >= 2000 {
+			chunks := make([]string, 0, len(resultString)/2000+1)
+			currentChunk := ""
+			for _, c := range resultString {
+				if len(currentChunk) >= 1999 {
+					chunks = append(chunks, currentChunk)
+					currentChunk = ""
+				}
+				currentChunk += string(c)
+			}
+			if currentChunk != "" {
+				chunks = append(chunks, currentChunk)
+			}
+
+			sender.Respond(s, i, chunks[0], nil)
+
+			for _, chunk := range chunks[1:] {
+				s.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+					Content: chunk,
+				})
+			}
+		} else {
+			sender.Respond(s, i, resultString, nil)
+		}
+	}
+}
+
+func getReportHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	// Parse the timeIndex from command input
+	numberString := fmt.Sprintf("%v", i.ApplicationCommandData().Options[0].IntValue())
+	timeIndex := strings.TrimSuffix(strings.TrimPrefix(numberString, string(numberString[0])), string(numberString[len(numberString)-1]))
+	var timeInt int
+	if timeIndex[0] == '0' {
+		timeInt, _ = strconv.Atoi(strings.TrimPrefix(timeIndex, "0"))
+		timeInt = -timeInt
+	} else {
+		timeInt, _ = strconv.Atoi(strings.TrimPrefix(timeIndex, "1"))
+	}
+
+	// Query the report
+	reports, err := database.Get("Report", []string{"pk_name", "fk_pilot_wrote", "description"})
+	if !sender.HandleErrInteraction(s, i, err) {
+		if len(reports) == 0 {
+			sender.RespondError(s, i, "No results")
+			return
+		}
+
+		// Get the first (and should be only) report
+		row := reports[0]
+		name := row[0]
+		id := row[1]
+		description := row[2]
+
+		// Get member nickname
+		member, _ := s.State.Member(i.GuildID, id)
+		nick := "Probably Saturn"
+		if member != nil && member.Nick != "" {
+			nick = member.Nick
+		}
+
+		// Create embed response
+		embed := &discordgo.MessageEmbed{
+			Title: name,
+			Author: &discordgo.MessageEmbedAuthor{
+				Name:    nick,
+				URL:     "https://aha-rp.org/get/pilots/" + strings.ReplaceAll(nick, " ", ""),
+				IconURL: "https://aha-rp.org/static/assets/avatars/" + id + ".png",
+			},
+			Color:       16738740,
+			URL:         fmt.Sprintf("https://aha-rp.org/get/reports/%v", i.ApplicationCommandData().Options[0].IntValue()),
+			Description: description,
+		}
+
+		if len(embed.Description) > 4000 {
+			sender.Respond(s, i, fmt.Sprintf("Fuck you, the report is too long. Go read it here: https://aha-rp.org/get/reports/%v", i.ApplicationCommandData().Options[0].IntValue()), nil)
+		} else {
+			sender.Respond(s, i, "", []*discordgo.MessageEmbed{embed})
+		}
 	}
 }
