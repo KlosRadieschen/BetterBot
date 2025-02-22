@@ -63,24 +63,20 @@ func Insert(table string, values ...*DBValue) error {
 	return nil
 }
 
-func Get(table string, fields []string) ([][]string, error) {
+func Get(table string, fields []string, where DBValue) ([][]string, error) {
 	err := db.Ping()
 	if err != nil {
 		return nil, err
 	}
 
-	// If no fields specified, use "*" to select all fields
-	fieldsStr := "*"
-	if len(fields) > 0 {
-		// Wrap field names in backticks and join them with commas
-		quotedFields := make([]string, len(fields))
-		for i, field := range fields {
-			quotedFields[i] = fmt.Sprintf("`%s`", field)
-		}
-		fieldsStr = strings.Join(quotedFields, ", ")
-	}
+	// change in future
+	query := fmt.Sprintf("SELECT %s FROM `%s` WHERE %v=%v",
+		strings.Join(fields, ", "),
+		table,
+		where.Name,
+		where.Value,
+	)
 
-	query := fmt.Sprintf("SELECT %s FROM `%s`", fieldsStr, table)
 	log.Println(fmt.Sprintf("Executing query: %v", query))
 
 	rows, err := db.Query(query)
@@ -89,37 +85,21 @@ func Get(table string, fields []string) ([][]string, error) {
 	}
 	defer rows.Close()
 
-	// Get column names from the query
-	columns, err := rows.Columns()
-	if err != nil {
-		return nil, err
-	}
-
-	// Create a slice of interface{} to hold the values
-	values := make([]any, len(columns))
-	valuePtrs := make([]any, len(columns))
-	for i := range columns {
-		valuePtrs[i] = &values[i]
-	}
-
 	var results [][]string
 
 	for rows.Next() {
-		// Scan the row into the slice of interface{}
-		err := rows.Scan(valuePtrs...)
-		if err != nil {
+		columns, _ := rows.Columns()
+		row := make([]string, len(columns))
+		rowPtrs := make([]any, len(columns))
+
+		for i := range row {
+			rowPtrs[i] = &row[i]
+		}
+
+		if err := rows.Scan(rowPtrs...); err != nil {
 			return nil, err
 		}
 
-		// Convert the row's values to strings
-		row := make([]string, len(columns))
-		for i, val := range values {
-			if val == nil {
-				row[i] = ""
-			} else {
-				row[i] = fmt.Sprintf("%v", val)
-			}
-		}
 		results = append(results, row)
 	}
 
@@ -148,11 +128,18 @@ func GetAll(table string) ([][]string, error) {
 	var results [][]string
 
 	for rows.Next() {
-		var ownerID, name, avatar, brackets string
-		if err := rows.Scan(&ownerID, &name, &avatar, &brackets); err != nil {
+		columns, _ := rows.Columns()
+		row := make([]string, len(columns))
+		rowPtrs := make([]any, len(columns))
+
+		for i := range row {
+			rowPtrs[i] = &row[i]
+		}
+
+		if err := rows.Scan(rowPtrs...); err != nil {
 			return nil, err
 		}
-		row := []string{ownerID, name, avatar, brackets}
+
 		results = append(results, row)
 	}
 
@@ -265,6 +252,15 @@ func stringsToAnys(strings []string) []interface{} {
 	result := make([]interface{}, len(strings))
 	for i, v := range strings {
 		result[i] = v
+	}
+	return result
+}
+
+func anysToStrings(anySlice []any) []string {
+	result := make([]string, len(anySlice))
+	for i, val := range anySlice {
+		str, _ := val.(string)
+		result[i] = str
 	}
 	return result
 }

@@ -327,7 +327,7 @@ var commands = map[string]command{
 			Name:        "getreport",
 			Description: "Get a report",
 			Options: []*discordgo.ApplicationCommandOption{
-				stringOption("index", "Index of the report", true),
+				intOption("index", "Index of the report", true),
 			},
 		},
 		handler: getReportHandler,
