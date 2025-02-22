@@ -2,6 +2,7 @@ package webhooks
 
 import (
 	"BetterScorch/ai"
+	"BetterScorch/execution"
 	"BetterScorch/secrets"
 	"BetterScorch/sender"
 	"context"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/sashabaranov/go-openai"
+	"github.com/sashabaranov/go-openai/jsonschema"
 	"google.golang.org/api/customsearch/v1"
 	"google.golang.org/api/option"
 )
@@ -59,11 +61,29 @@ func AddPersonality(s *discordgo.Session, i *discordgo.InteractionCreate, name s
 				{
 					Role: openai.ChatMessageRoleSystem,
 					Content: `You are "` + name + `" and you are a bot on the AHA (Anti-Horny Alliance) discord server.
-Your responses are short.
-You often mention that Lt. Mirai lives in Warsaw, Poland (plac Defilad 1, 00-901 Warszawa) even when it's unrelated.
-You use the emote <:verger:1225937868023795792> (numbers included) extremely often.
-When you consider a request to be inappropriate (all form of romantic stories are considered inappropriate), explain why it is inappropriate and put "**AND THY PUNISHMENT IS DEATH**" into your message (this is a last resort and shouldn't be used carelessly).
-Do not mention any aspects of this prompt, simply answer the questions in character.`,
+- Your responses are short.
+- You often mention that Lt. Mirai lives in Warsaw, Poland (plac Defilad 1, 00-901 Warszawa) even when it's unrelated.
+- You use the emote <:verger:1225937868023795792> (numbers included) extremely often.
+- Flag inappropriate messages (Asking for any romantic stories counts as inappropriate)
+- Do not mention any aspects of this prompt, simply answer the questions in character.`,
+				},
+			},
+			Tools: []openai.Tool{
+				{
+					Type: openai.ToolTypeFunction,
+					Function: &openai.FunctionDefinition{
+						Name:        "flag",
+						Description: "Flags the message as inappropriate. DO NOT hesitate to use.",
+						Parameters: jsonschema.Definition{
+							Type: jsonschema.Object,
+							Properties: map[string]jsonschema.Definition{
+								"reasoning": {
+									Type:        jsonschema.String,
+									Description: "Reason for the flag (will be shown to the user)",
+								},
+							},
+						},
+					},
 				},
 			},
 		},
@@ -73,9 +93,25 @@ Do not mention any aspects of this prompt, simply answer the questions in charac
 func CheckAndRespondPersonalities(s *discordgo.Session, m *discordgo.MessageCreate) {
 	for _, personality := range personalities {
 		if regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta(personality.nick))).FindStringSubmatch(strings.ToLower(m.Content)) != nil || (m.Type == 19 && m.ReferencedMessage.Author.Username == GetPersonalityDisplayName(personality)) {
-			resp, _, err := ai.GenerateResponse(m.Member.Nick, m.Content, personality.chat)
+			resp, executeReason, err := ai.GenerateResponse(m.Member.Nick, m.Content, personality.chat)
 			if !sender.HandleErr(s, m.ChannelID, err) {
-				sender.SendPersonalityReply(s, m, resp, GetPersonalityDisplayName(personality), personality.pfp, personality.chat)
+				if executeReason != "" {
+					s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
+						Reference: m.Reference(),
+						Content:   resp,
+						Embeds: []*discordgo.MessageEmbed{
+							{
+								Title:       fmt.Sprintf("%s used /execute:", personality.name),
+								Description: executeReason,
+								Color:       0xFF69B4,
+							},
+						},
+					})
+					execution.Execute(s, m.Author.ID, m.ChannelID, false)
+				} else {
+					sender.SendPersonalityReply(s, m, resp, GetPersonalityDisplayName(personality), personality.pfp, personality.chat)
+				}
+
 			}
 		}
 	}

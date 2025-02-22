@@ -32,7 +32,6 @@ var responses = []messageResponse{
 	{triggers: []string{"cack"}, response: "cack", isMedia: true},
 	{triggers: []string{"bone", "skull", "skeleton", "grim reaper", "greg"}, response: "bone", isMedia: true},
 	{triggers: []string{"benjamin"}, response: "benjamin", isMedia: true},
-	{triggers: []string{"based"}, response: "based", isMedia: true},
 	{triggers: []string{"autist", "autism", "acoustic"}, response: "autism", isMedia: true},
 	{triggers: []string{"ps4", "ps5", "playstation"}, response: "ps", isMedia: true},
 	{triggers: []string{"mario"}, response: "mario", isMedia: true},

@@ -8,6 +8,7 @@ import (
 	"container/list"
 	"fmt"
 	"log"
+	"os"
 	"regexp"
 	"strings"
 
@@ -19,9 +20,6 @@ var Msgs = make(map[string]*list.List)
 
 func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	channel, _ := s.Channel(m.ChannelID)
-	if m.Author.Bot || execution.CheckAndDeleteExecuteeMessage(s, m) || Sleeping || (channel.ParentID != "1234128503968891032" && channel.ParentID != "1300423257262133280") {
-		return
-	}
 
 	if Msgs[m.Author.ID] == nil {
 		Msgs[m.Author.ID] = list.New()
@@ -30,8 +28,12 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if Msgs[m.Author.ID].Len() > 5 {
 		Msgs[m.Author.ID].Remove(Msgs[m.Author.ID].Front())
 	}
-
 	go webhooks.CheckAndUseCharacters(s, m)
+
+	if m.Author.Bot || execution.CheckAndDeleteExecuteeMessage(s, m) || Sleeping || (channel.ParentID != "1234128503968891032" && channel.ParentID != "1300423257262133280") {
+		return
+	}
+
 	go webhooks.CheckAndRespondPersonalities(s, m)
 	go handleAIResponses(s, m)
 
@@ -53,6 +55,22 @@ func handleAIResponses(s *discordgo.Session, m *discordgo.MessageCreate) {
 		resp, executeReason, err := ai.GenerateResponse(m.Member.Nick, m.Content)
 		if !sender.HandleErr(s, m.ChannelID, err) {
 			if executeReason != "" {
+				if executeReason == "SEND PICTURE" {
+					file, err := os.Open("klosette.jpg")
+					sender.HandleErr(s, m.ChannelID, err)
+					defer file.Close()
+					reader := discordgo.File{
+						Name:   "klosette.jpg",
+						Reader: file,
+					}
+					messageContent := &discordgo.MessageSend{
+						Files:     []*discordgo.File{&reader},
+						Reference: m.Reference(),
+					}
+					s.ChannelMessageSendComplex(m.ChannelID, messageContent)
+					return
+				}
+
 				s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
 					Reference: m.Reference(),
 					Content:   resp,
