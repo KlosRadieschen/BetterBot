@@ -68,7 +68,7 @@ func listCharactersHandler(s *discordgo.Session, i *discordgo.InteractionCreate)
 		})
 	}
 
-	sender.Respond(s, i, "", embeds)
+	sender.RespondEphemeral(s, i, "", embeds)
 }
 
 /*

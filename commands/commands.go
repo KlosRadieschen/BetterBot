@@ -27,7 +27,7 @@ func AddAllCommands(s *discordgo.Session) {
 	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		if i.Type == discordgo.InteractionApplicationCommand {
 			if execution.IsDead(i.Member.User.ID) && i.Member.User.ID != "384422339393355786" {
-				sender.RespondEphemeral(s, i, "https://tenor.com/view/yellow-emoji-no-no-emotiguy-no-no-no-gif-gif-9742000569423889376")
+				sender.RespondEphemeral(s, i, "https://tenor.com/view/yellow-emoji-no-no-emotiguy-no-no-no-gif-gif-9742000569423889376", nil)
 			} else {
 				log.Println("Received Command: " + i.ApplicationCommandData().Name)
 				if h, ok := commands[i.ApplicationCommandData().Name]; ok {
@@ -45,14 +45,14 @@ func AddAllCommands(s *discordgo.Session) {
 			if i.Type == discordgo.InteractionMessageComponent && strings.HasPrefix(strings.ToLower(i.MessageComponentData().CustomID), strings.ToLower(commandName)) {
 				log.Println("Received Command: " + i.MessageComponentData().CustomID)
 				if execution.IsDead(i.Member.User.ID) {
-					sender.RespondEphemeral(s, i, "https://tenor.com/view/yellow-emoji-no-no-emotiguy-no-no-no-gif-gif-9742000569423889376")
+					sender.RespondEphemeral(s, i, "https://tenor.com/view/yellow-emoji-no-no-emotiguy-no-no-no-gif-gif-9742000569423889376", nil)
 				} else {
 					commandFunction(s, i)
 				}
 			} else if i.Type == discordgo.InteractionModalSubmit && strings.ToLower(i.ModalSubmitData().CustomID) == strings.ToLower(commandName) {
 				log.Println("Received Command: " + i.ModalSubmitData().CustomID)
 				if execution.IsDead(i.Member.User.ID) {
-					sender.RespondEphemeral(s, i, "https://tenor.com/view/yellow-emoji-no-no-emotiguy-no-no-no-gif-gif-9742000569423889376")
+					sender.RespondEphemeral(s, i, "https://tenor.com/view/yellow-emoji-no-no-emotiguy-no-no-no-gif-gif-9742000569423889376", nil)
 				} else {
 					commandFunction(s, i)
 				}

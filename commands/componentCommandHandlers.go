@@ -47,7 +47,7 @@ func pollShowHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	embeds, err := polls.GetAllVotesEmbeds(s, i.Message.ID)
 	if err != nil {
-		sender.RespondEphemeral(s, i, "Sorry, his poll is broken")
+		sender.RespondEphemeral(s, i, "Sorry, his poll is broken", nil)
 	} else {
 		if polls.GetVotesSum(i.Message.ID) == 0 {
 			s.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
