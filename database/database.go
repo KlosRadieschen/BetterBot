@@ -117,7 +117,7 @@ func GetAll(table string) ([][]string, error) {
 	}
 
 	query := fmt.Sprintf("SELECT * FROM `%s`", table)
-	log.Println(fmt.Sprintf("Executing query: %v", query))
+	// log.Println(fmt.Sprintf("Executing query: %v", query))
 
 	rows, err := db.Query(query)
 	if err != nil {
