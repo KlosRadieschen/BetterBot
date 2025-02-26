@@ -13,6 +13,7 @@ import (
 var (
 	client    = openai.NewClient("")
 	scorchReq = openai.ChatCompletionRequest{
+		Model: "hf.co/lmstudio-community/Qwen2.5-14B-Instruct-1M-GGUF:Q4_K_M",
 		Messages: []openai.ChatCompletionMessage{
 			{
 				Role: openai.ChatMessageRoleSystem,
@@ -61,8 +62,8 @@ var (
 )
 
 func Init() {
-	config := openai.DefaultConfig("lm-studio")
-	config.BaseURL = "http://localhost:1234/v1/"
+	config := openai.DefaultConfig("ollama")
+	config.BaseURL = "http://chat.wagener.family:11434/v1"
 
 	client = openai.NewClientWithConfig(config)
 }
