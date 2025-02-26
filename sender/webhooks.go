@@ -73,7 +73,7 @@ func SendPersonalityMessage(s *discordgo.Session, channelID string, msg string, 
 	HandleErr(s, channelID, err)
 }
 
-func SendPersonalityReply(s *discordgo.Session, m *discordgo.MessageCreate, msg string, name string, pfpLink string, req *openai.ChatCompletionRequest) {
+func SendPersonalityReply(s *discordgo.Session, m *discordgo.MessageCreate, msg string, name string, pfpLink string, embeds []*discordgo.MessageEmbed, req *openai.ChatCompletionRequest) {
 	if webhook.ChannelID != m.ChannelID {
 		s.WebhookEdit(webhook.ID, webhook.Name, webhook.Avatar, m.ChannelID)
 	}
@@ -87,6 +87,7 @@ func SendPersonalityReply(s *discordgo.Session, m *discordgo.MessageCreate, msg 
 		),
 		Username:  name,
 		AvatarURL: pfpLink,
+		Embeds:    embeds,
 	})
 	HandleErr(s, m.ChannelID, err)
 }

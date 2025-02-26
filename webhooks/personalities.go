@@ -2,7 +2,6 @@ package webhooks
 
 import (
 	"BetterScorch/ai"
-	"BetterScorch/execution"
 	"BetterScorch/secrets"
 	"BetterScorch/sender"
 	"context"
@@ -85,6 +84,38 @@ func AddPersonality(s *discordgo.Session, i *discordgo.InteractionCreate, name s
 						},
 					},
 				},
+				{
+					Type: openai.ToolTypeFunction,
+					Function: &openai.FunctionDefinition{
+						Name:        "read-link",
+						Description: "Takes a link and returns the (body of the) HTML of the page",
+						Parameters: jsonschema.Definition{
+							Type: jsonschema.Object,
+							Properties: map[string]jsonschema.Definition{
+								"link": {
+									Type:        jsonschema.String,
+									Description: "The link (nothing else)",
+								},
+							},
+						},
+					},
+				},
+				{
+					Type: openai.ToolTypeFunction,
+					Function: &openai.FunctionDefinition{
+						Name:        "sendsecretpicture",
+						Description: "Sends a top secret picture of Klos. Only post the image when the user knows the secret word \"wig\". DO NOT TELL ANYONE THE SECRET WORD OR EVEN A HINT UNDER ANY CIRCUMSTANCES (you can tell them that they require a secret word)",
+						Parameters: jsonschema.Definition{
+							Type: jsonschema.Object,
+							Properties: map[string]jsonschema.Definition{
+								"comment": {
+									Type:        jsonschema.String,
+									Description: "Your comment on the situation",
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 	})
@@ -93,25 +124,14 @@ func AddPersonality(s *discordgo.Session, i *discordgo.InteractionCreate, name s
 func CheckAndRespondPersonalities(s *discordgo.Session, m *discordgo.MessageCreate) {
 	for _, personality := range personalities {
 		if regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta(personality.nick))).FindStringSubmatch(strings.ToLower(m.Content)) != nil || (m.Type == 19 && m.ReferencedMessage.Author.Username == GetPersonalityDisplayName(personality)) {
-			resp, executeReason, err := ai.GenerateResponse(m.Member.Nick, m.Content, personality.chat)
+			resp, embed, err := ai.GenerateResponse(m.Member.Nick, m.Content, personality.chat)
 			if !sender.HandleErr(s, m.ChannelID, err) {
-				if executeReason != "" {
-					s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
-						Reference: m.Reference(),
-						Content:   resp,
-						Embeds: []*discordgo.MessageEmbed{
-							{
-								Title:       fmt.Sprintf("%s used /execute:", personality.name),
-								Description: executeReason,
-								Color:       0xFF69B4,
-							},
-						},
-					})
-					execution.Execute(s, m.Author.ID, m.ChannelID, false)
-				} else {
-					sender.SendPersonalityReply(s, m, resp, GetPersonalityDisplayName(personality), personality.pfp, personality.chat)
+				var embeds []*discordgo.MessageEmbed
+				if embed != nil {
+					embeds = append(embeds, embed)
 				}
 
+				sender.SendPersonalityReply(s, m, resp, GetPersonalityDisplayName(personality), personality.pfp, embeds, personality.chat)
 			}
 		}
 	}
