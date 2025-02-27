@@ -32,7 +32,7 @@ var (
 				Type: openai.ToolTypeFunction,
 				Function: &openai.FunctionDefinition{
 					Name:        "flag",
-					Description: "Flags the message as inappropriate. DO NOT hesitate to use.",
+					Description: "Flags the message as inappropriate.",
 					Parameters: jsonschema.Definition{
 						Type: jsonschema.Object,
 						Properties: map[string]jsonschema.Definition{

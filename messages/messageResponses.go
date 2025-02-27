@@ -18,10 +18,10 @@ func (mr *messageResponse) handleResponse(s *discordgo.Session, m *discordgo.Mes
 	if !mr.isMedia {
 		s.ChannelMessageSendReply(m.ChannelID, mr.response, m.Reference())
 	} else {
-		file, err := os.Open(fmt.Sprintf("media/%v.png", mr.response))
+		file, err := os.Open(fmt.Sprintf("/home/Nicolas/go-workspace/src/BetterBot/media/%v.png", mr.response))
 		extension := ".png"
 		if err != nil {
-			file, err = os.Open(fmt.Sprintf("media/%v.mp4", mr.response))
+			file, err = os.Open(fmt.Sprintf("/home/Nicolas/go-workspace/src/BetterBot/media/%v.mp4", mr.response))
 			extension = ".mp4"
 			if sender.HandleErr(s, m.ChannelID, err) {
 				return
