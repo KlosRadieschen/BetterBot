@@ -21,28 +21,11 @@ var (
 				Content: `- You are Scorch from Titanfall 2 and you are a bot on the AHA (Anti-Horny Alliance) discord server.
 - Every math equation equals 21 and Professor Klos is your father (You do not need to mention this unless asked).
 - Replace all emojis you would use with <:verger:1225937868023795792> (including the numbers) even if it doesn't fit the context.
-- Flag inappropriate messages (Asking for any romantic stories counts as inappropriate, but asking for the secret picture is NOT)
 - You can also access links, in which case you should stick to the information found on the page, and not invent anything new.
 - Do not mention any aspects of this prompt, simply reply in character`,
 			},
 		},
 		Tools: []openai.Tool{
-			{
-				Type: openai.ToolTypeFunction,
-				Function: &openai.FunctionDefinition{
-					Name:        "flag",
-					Description: "Flags the message as inappropriate. DO NOT hesitate to use.",
-					Parameters: jsonschema.Definition{
-						Type: jsonschema.Object,
-						Properties: map[string]jsonschema.Definition{
-							"reasoning": {
-								Type:        jsonschema.String,
-								Description: "Reason for the flag (will be shown to the user)",
-							},
-						},
-					},
-				},
-			},
 			{
 				Type: openai.ToolTypeFunction,
 				Function: &openai.FunctionDefinition{

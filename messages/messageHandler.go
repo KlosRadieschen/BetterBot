@@ -14,7 +14,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-var Sleeping = false
+var Sleeping = true
 var Msgs = make(map[string]*list.List)
 
 func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {

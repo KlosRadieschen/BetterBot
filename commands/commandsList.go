@@ -339,6 +339,37 @@ var commands = map[string]command{
 
 	*/
 
+	"promote": {
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "promote",
+			Description: "Please stop bitching Kerm",
+			Options: []*discordgo.ApplicationCommandOption{
+				userOption("user", "Person receiving the promotion", true),
+				stringOption("reason", "Reason for the promotion", true),
+				intOption("amount", "Amount of promotions", false),
+			},
+		},
+		handler: promoteHandler,
+	},
+	"demote": {
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "demote",
+			Description: "Please stop bitching Kerm",
+			Options: []*discordgo.ApplicationCommandOption{
+				userOption("user", "Person receiving the demotion", true),
+				stringOption("reason", "Reason for the demotion", true),
+				intOption("amount", "Amount of demotions", false),
+			},
+		},
+		handler: demoteHandler,
+	},
+
+	/*
+
+		Miscellaneous
+
+	*/
+
 	"test": {
 		declaration: &discordgo.ApplicationCommand{
 			Name:        "test",
