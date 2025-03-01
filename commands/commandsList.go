@@ -405,6 +405,23 @@ var commands = map[string]command{
 		},
 		handler: linkHandler,
 	},
+	"message": {
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "message",
+			Description: "Leave a message for someone",
+			Options: []*discordgo.ApplicationCommandOption{
+				userOption("recipient", "Person receiving the message", true),
+				{
+					Type:         discordgo.ApplicationCommandOptionString,
+					Name:         "character",
+					Description:  "Sends the message with one of your characters",
+					Required:     false,
+					Autocomplete: true,
+				},
+			},
+		},
+		handler: messageHandler,
+	},
 }
 
 var componentAndModalCommands = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
@@ -414,6 +431,11 @@ var componentAndModalCommands = map[string]func(s *discordgo.Session, i *discord
 	"inputpollmodalcreate": inputPollModalCreateHandler,
 	"inputpollmodalsubmit": inputPollModalSubmit,
 	"inputpollshow":        inputPollShowHandler,
+	"messagemodalsubmit":   messageModalSubmit,
+}
+
+var autocompletes = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
+	"message": messageAutocompleteHandler,
 }
 
 func intOption(name string, desc string, required bool) *discordgo.ApplicationCommandOption {

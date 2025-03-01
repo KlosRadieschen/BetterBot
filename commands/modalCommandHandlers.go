@@ -1,8 +1,12 @@
 package commands
 
 import (
+	"BetterScorch/messages"
 	"BetterScorch/polls"
+	"BetterScorch/secrets"
 	"BetterScorch/sender"
+	"BetterScorch/webhooks"
+	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -43,5 +47,40 @@ func inputPollModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) 
 	response := i.ModalSubmitData().Components[0].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
 	polls.SubmitInputPollResponse(s, i.Message.ID, i.Member.User.ID, response)
 	sender.RespondEphemeral(s, i, "Answer submitted", nil)
+	go sender.SetResponseTimeout(s, i, 5*time.Second)
+}
+
+func messageModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	split := strings.Split(i.ModalSubmitData().CustomID, "-")
+	recipientID := split[1]
+	message := i.ModalSubmitData().Components[0].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
+
+	var name string
+	var pfp string
+	if len(split) > 2 {
+		for ID, characters := range webhooks.CharacterBuffer {
+			if ID == i.Member.User.ID {
+				for _, character := range characters {
+					if character.Name == split[2] {
+						name = character.Name
+						pfp = character.AvatarLink
+					}
+				}
+			}
+		}
+	} else {
+		member, _ := s.GuildMember(secrets.GuildID, i.Member.User.ID)
+		name = member.Nick
+		pfp = member.AvatarURL("")
+	}
+
+	messages.UserMessages = append(messages.UserMessages, messages.UserMessage{
+		SenderName:  name,
+		SenderPFP:   pfp,
+		RecipientID: recipientID,
+		Message:     message,
+	})
+
+	sender.RespondEphemeral(s, i, "Message send", nil)
 	go sender.SetResponseTimeout(s, i, 5*time.Second)
 }

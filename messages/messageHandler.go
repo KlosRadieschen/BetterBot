@@ -9,13 +9,22 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
 
+type UserMessage struct {
+	SenderName  string
+	SenderPFP   string
+	RecipientID string
+	Message     string
+}
+
 var Sleeping = true
 var Msgs = make(map[string]*list.List)
+var UserMessages = []UserMessage{}
 
 func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	channel, _ := s.Channel(m.ChannelID)
@@ -28,6 +37,7 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 		Msgs[m.Author.ID].Remove(Msgs[m.Author.ID].Front())
 	}
 	go webhooks.CheckAndUseCharacters(s, m)
+	go checkAndSendUserMessages(s, m)
 
 	if m.Author.Bot || execution.CheckAndDeleteExecuteeMessage(s, m) || Sleeping || (channel.ParentID != "1234128503968891032" && channel.ParentID != "1300423257262133280") {
 		return
@@ -73,4 +83,24 @@ func checkOOCChannel(s *discordgo.Session, m *discordgo.MessageCreate) bool {
 		return false
 	}
 	return channel.ParentID == "1234128503968891032" || channel.ParentID == "1300423257262133280"
+}
+
+func checkAndSendUserMessages(s *discordgo.Session, m *discordgo.MessageCreate) {
+	for _, userMessage := range UserMessages {
+		if m.Author.ID == userMessage.RecipientID {
+			embed := discordgo.MessageEmbed{
+				Description: userMessage.Message,
+				Color:       0xFF69B4,
+				Author: &discordgo.MessageEmbedAuthor{
+					Name:    userMessage.SenderName,
+					IconURL: userMessage.SenderPFP,
+				},
+			}
+
+			s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{Embeds: []*discordgo.MessageEmbed{&embed}})
+			UserMessages = slices.DeleteFunc(UserMessages, func(um UserMessage) bool {
+				return um.SenderName == userMessage.SenderName
+			})
+		}
+	}
 }

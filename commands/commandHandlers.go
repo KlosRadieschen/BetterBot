@@ -235,3 +235,47 @@ func demoteHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	sender.Respond(s, i, member.Mention()+", you have been demoted:\n"+i.ApplicationCommandData().Options[1].StringValue(), nil)
 }
+
+func messageHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	charName := ""
+	if len(i.ApplicationCommandData().Options) > 1 {
+		exists := false
+		for ID, characters := range webhooks.CharacterBuffer {
+			if ID == i.Member.User.ID {
+				for _, character := range characters {
+					if character.Name == i.ApplicationCommandData().Options[1].StringValue() {
+						exists = true
+					}
+				}
+			}
+		}
+
+		if exists {
+			charName = "-" + i.ApplicationCommandData().Options[1].StringValue()
+		} else {
+			sender.RespondError(s, i, "User is trying to send a message using a character that doesn't exist")
+			return
+		}
+	}
+
+	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseModal,
+		Data: &discordgo.InteractionResponseData{
+			Title:    "Send message",
+			CustomID: "messagemodalsubmit-" + i.ApplicationCommandData().Options[0].UserValue(nil).ID + charName,
+			Components: []discordgo.MessageComponent{
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.TextInput{
+							CustomID: "message",
+							Label:    "Message",
+							Style:    discordgo.TextInputParagraph,
+							Required: true,
+						},
+					},
+				},
+			},
+		},
+	})
+	sender.HandleErrInteraction(s, i, err)
+}
