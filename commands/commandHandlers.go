@@ -10,6 +10,7 @@ import (
 	"BetterScorch/webhooks"
 	"fmt"
 	"math/rand"
+	"slices"
 	"strings"
 	"time"
 
@@ -185,4 +186,52 @@ func linkHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if !sender.HandleErrInteractionFollowup(s, i, err) {
 		sender.Followup(s, i, resp)
 	}
+}
+
+func promoteHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	if !isHC(i.Member) {
+		sender.RespondError(s, i, "User tried to promote someone but doesn't have the proper perms")
+		return
+	}
+
+	var roles = []string{"1195135956471255140", "1195858311627669524", "1195858271349784639", "1195136106811887718", "1195858179590987866", "1195137362259349504", "1195136284478410926", "1195137253408768040", "1250582641921757335", "1195758308519325716", "1195758241221722232", "1195758137563689070", "1195757362439528549", "1195136491148550246", "1195708423229165578", "1195137477497868458", "1195136604373782658", "1248776818664935525", "1277091839647678575"}
+
+	count := 1
+	if len(i.ApplicationCommandData().Options) == 3 {
+		count = int(i.ApplicationCommandData().Options[2].IntValue())
+	}
+
+	member, _ := s.GuildMember(secrets.GuildID, i.ApplicationCommandData().Options[0].UserValue(nil).ID)
+	for _, role := range member.Roles {
+		if slices.Contains(roles, role) {
+			s.GuildMemberRoleRemove(secrets.GuildID, i.ApplicationCommandData().Options[0].UserValue(nil).ID, role)
+			s.GuildMemberRoleAdd(secrets.GuildID, i.ApplicationCommandData().Options[0].UserValue(nil).ID, roles[slices.Index(roles, role)-count])
+		}
+	}
+
+	sender.Respond(s, i, member.Mention()+", you have been promoted:\n"+i.ApplicationCommandData().Options[1].StringValue(), nil)
+}
+
+func demoteHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	if !isHC(i.Member) {
+		sender.RespondError(s, i, "User tried to promote someone but doesn't have the proper perms")
+		return
+	}
+
+	var roles = []string{"1195135956471255140", "1195858311627669524", "1195858271349784639", "1195136106811887718", "1195858179590987866", "1195137362259349504", "1195136284478410926", "1195137253408768040", "1250582641921757335", "1195758308519325716", "1195758241221722232", "1195758137563689070", "1195757362439528549", "1195136491148550246", "1195708423229165578", "1195137477497868458", "1195136604373782658", "1248776818664935525", "1277091839647678575"}
+
+	count := 1
+	if len(i.ApplicationCommandData().Options) == 3 {
+		count = int(i.ApplicationCommandData().Options[2].IntValue())
+	}
+
+	member, _ := s.GuildMember(secrets.GuildID, i.ApplicationCommandData().Options[0].UserValue(nil).ID)
+	for _, role := range member.Roles {
+		if slices.Contains(roles, role) {
+			s.GuildMemberRoleRemove(secrets.GuildID, i.ApplicationCommandData().Options[0].UserValue(nil).ID, role)
+			s.GuildMemberRoleAdd(secrets.GuildID, i.ApplicationCommandData().Options[0].UserValue(nil).ID, roles[slices.Index(roles, role)+count])
+		}
+	}
+
+	sender.Respond(s, i, member.Mention()+", you have been demoted:\n"+i.ApplicationCommandData().Options[1].StringValue(), nil)
 }
