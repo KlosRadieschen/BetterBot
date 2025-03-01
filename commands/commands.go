@@ -49,13 +49,24 @@ func AddAllCommands(s *discordgo.Session) {
 				} else {
 					commandFunction(s, i)
 				}
-			} else if i.Type == discordgo.InteractionModalSubmit && strings.ToLower(i.ModalSubmitData().CustomID) == strings.ToLower(commandName) {
+			} else if i.Type == discordgo.InteractionModalSubmit && strings.HasPrefix(strings.ToLower(i.ModalSubmitData().CustomID), strings.ToLower(commandName)) {
 				log.Println("Received Command: " + i.ModalSubmitData().CustomID)
 				if execution.IsDead(i.Member.User.ID) {
 					sender.RespondEphemeral(s, i, "https://tenor.com/view/yellow-emoji-no-no-emotiguy-no-no-no-gif-gif-9742000569423889376", nil)
 				} else {
 					commandFunction(s, i)
 				}
+			}
+		})
+	}
+	fmt.Println("Done")
+
+	fmt.Print("    |   Adding autocompletions... ")
+	for commandName, commandFunction := range autocompletes {
+		s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			if i.Type == discordgo.InteractionApplicationCommandAutocomplete && strings.HasPrefix(strings.ToLower(i.ApplicationCommandData().Name), strings.ToLower(commandName)) {
+				log.Println("Received Autocomplete: " + i.ApplicationCommandData().Name)
+				commandFunction(s, i)
 			}
 		})
 	}

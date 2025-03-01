@@ -18,10 +18,10 @@ type Character struct {
 	Brackets   string
 }
 
-var characterBuffer = make(map[string][]Character)
+var CharacterBuffer = make(map[string][]Character)
 
 func AddCharacter(ownerID string, character Character) error {
-	characterBuffer[ownerID] = append(characterBuffer[ownerID], character)
+	CharacterBuffer[ownerID] = append(CharacterBuffer[ownerID], character)
 
 	err := database.Insert("Character",
 		&database.DBValue{Name: "pk_ownerID", Value: character.OwnerID},
@@ -33,7 +33,7 @@ func AddCharacter(ownerID string, character Character) error {
 }
 
 func CheckAndUseCharacters(s *discordgo.Session, m *discordgo.MessageCreate) error {
-	for _, character := range characterBuffer[m.Author.ID] {
+	for _, character := range CharacterBuffer[m.Author.ID] {
 		match, err := matchesTupperPattern(m.Content, character.Brackets)
 		if err != nil {
 			return err
@@ -55,7 +55,7 @@ func CheckAndUseCharacters(s *discordgo.Session, m *discordgo.MessageCreate) err
 
 func RetrieveCharacters() {
 	// Reset/clear the buffer first to ensure clean state
-	characterBuffer = make(map[string][]Character)
+	CharacterBuffer = make(map[string][]Character)
 
 	// Get all characters from persistent storage
 	characters, err := database.GetAll("Character")
@@ -71,7 +71,7 @@ func RetrieveCharacters() {
 			AvatarLink: row[2], // avatar
 			Brackets:   row[3], // brackets
 		}
-		characterBuffer[char.OwnerID] = append(characterBuffer[char.OwnerID], char)
+		CharacterBuffer[char.OwnerID] = append(CharacterBuffer[char.OwnerID], char)
 	}
 }
 
@@ -93,7 +93,7 @@ func RemoveCharacter(userID string, characterName string) (bool, error) {
 		return false, err
 	}
 
-	characterBuffer[userID] = slices.DeleteFunc(characterBuffer[userID], func(c Character) bool {
+	CharacterBuffer[userID] = slices.DeleteFunc(CharacterBuffer[userID], func(c Character) bool {
 		return c.Name == characterName
 	})
 
@@ -102,7 +102,7 @@ func RemoveCharacter(userID string, characterName string) (bool, error) {
 
 // List all characters owned by the user from characterBuffer
 func ListCharacters(userID string) []Character {
-	if characters, ok := characterBuffer[userID]; ok {
+	if characters, ok := CharacterBuffer[userID]; ok {
 		return characters
 	}
 
