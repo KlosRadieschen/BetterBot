@@ -81,9 +81,17 @@ func WaitAndEvaluateInput(s *discordgo.Session, pollID string, ctx context.Conte
 	thread, _ := s.MessageThreadStart(pollChannelID, pollID, "Discussion", 60)
 
 	<-ctx.Done()
+	endTime, _ := ctx.Deadline()
 
 	poll, _ := s.ChannelMessage(pollChannelID, pollID)
-	newContent := strings.Replace(poll.Content, "expires", "expired", -1)
+
+	var newContent string
+	if time.Now().After(endTime) {
+		newContent = strings.Replace(poll.Content, "expires", "expired", -1)
+	} else {
+		newContent = strings.Replace(poll.Content, "expires", "expired", -1) + " (poll ended early)"
+	}
+
 	edit := discordgo.MessageEdit{
 		Channel:    poll.ChannelID,
 		ID:         poll.ID,
@@ -142,8 +150,10 @@ func GetNumberOfInputs(pollID string) int {
 func CancelAll() {
 	for _, poll := range inputPolls {
 		poll.cancel()
+		time.Sleep(3 * time.Second)
 	}
 	for _, poll := range optionPolls {
 		poll.cancel()
+		time.Sleep(3 * time.Second)
 	}
 }

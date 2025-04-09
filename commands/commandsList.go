@@ -18,10 +18,10 @@ var commands = map[string]command{
 		},
 		handler: executeHandler,
 	},
-	"Yeah I guess they can live": {
+	"FUCKING UNKILL THEM": {
 		declaration: &discordgo.ApplicationCommand{
 			Type: discordgo.UserApplicationCommand,
-			Name: "Yeah I guess they can live",
+			Name: "FUCKING UNKILL THEM",
 		},
 		handler: reviveHandler,
 	},
@@ -31,6 +31,7 @@ var commands = map[string]command{
 			Description: "Admin abuse my beloved",
 			Options: []*discordgo.ApplicationCommandOption{
 				userOption("target", "User you want to kill", true),
+				boolOption("gamble", "An option for mods to gamble (low ranking scums do not have a choice)", false),
 			},
 		},
 		handler: executeHandler,
@@ -40,7 +41,8 @@ var commands = map[string]command{
 			Name:        "revive",
 			Description: "Admin abuse my beloved",
 			Options: []*discordgo.ApplicationCommandOption{
-				userOption("target", "USer you want to revive", true),
+				userOption("target", "User you want to revive", true),
+				boolOption("gamble", "An option for mods to gamble (low ranking scums do not have a choice)", false),
 			},
 		},
 		handler: reviveHandler,
@@ -79,10 +81,6 @@ var commands = map[string]command{
 					Required:    true,
 					Choices: []*discordgo.ApplicationCommandOptionChoice{
 						{
-							Name:  "1 minute",
-							Value: 1,
-						},
-						{
 							Name:  "15 minutes",
 							Value: 15,
 						},
@@ -109,35 +107,30 @@ var commands = map[string]command{
 					Name:        "option1",
 					Description: "First option that people can choose",
 					Required:    true,
-					MaxLength:   25,
 				},
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
 					Name:        "option2",
 					Description: "Second option that people can choose",
 					Required:    true,
-					MaxLength:   25,
 				},
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
 					Name:        "option3",
 					Description: "Third option that people can choose",
 					Required:    false,
-					MaxLength:   25,
 				},
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
 					Name:        "option4",
 					Description: "Fourth option that people can choose",
 					Required:    false,
-					MaxLength:   25,
 				},
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
 					Name:        "option5",
 					Description: "Fifth option that people can choose",
 					Required:    false,
-					MaxLength:   25,
 				},
 			},
 		},
@@ -441,6 +434,17 @@ var commands = map[string]command{
 			},
 		},
 		handler: messageHandler,
+	},
+	"ticket": {
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "ticket",
+			Description: "submit a ticket",
+			Options: []*discordgo.ApplicationCommandOption{
+				stringOption("title", "name/title of the ticket", true),
+				stringOption("content", "Content of the ticket", true),
+			},
+		},
+		handler: ticketHandler,
 	},
 }
 

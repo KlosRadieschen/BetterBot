@@ -5,6 +5,7 @@ import (
 	"BetterScorch/sender"
 	"container/list"
 	"fmt"
+	"math/rand"
 	"slices"
 	"strings"
 	"time"
@@ -54,6 +55,101 @@ func Execute(s *discordgo.Session, userID string, channelID string, sacrificed b
 	sender.SendMessage(s, channelID, fmt.Sprintf("%v is fucking dead", Member(s, userID).Mention()))
 }
 
+func GambleExecute(s *discordgo.Session, i *discordgo.InteractionCreate, attackerID string, victimID string) {
+	attackerMember, _ := s.GuildMember(i.GuildID, attackerID)
+	victimMember, _ := s.GuildMember(i.GuildID, victimID)
+
+	var msg *discordgo.Message
+	if !IsAdminAbuser(victimMember) {
+		msg, _ = s.ChannelMessageSendComplex(i.ChannelID, &discordgo.MessageSend{
+			Embeds: []*discordgo.MessageEmbed{
+				{
+					Color: 0xFF69B4,
+					Title: strings.ToUpper(attackerMember.Nick) + " FUCKING DIES",
+				},
+				{
+					Color: 0xFF69B4,
+					Title: strings.ToUpper(victimMember.Nick) + " FUCKING DIES",
+				},
+				{
+					Color: 0xFF69B4,
+					Title: "BOTH FUCKING DIE",
+				},
+				{
+					Color: 0xFF69B4,
+					Title: "NOBODY FUCKING DIES",
+				},
+			},
+		})
+	} else {
+		msg, _ = s.ChannelMessageSendComplex(i.ChannelID, &discordgo.MessageSend{
+			Embeds: []*discordgo.MessageEmbed{
+				{
+					Color: 0xFF69B4,
+					Title: strings.ToUpper(attackerMember.Nick) + " FUCKING DIES",
+				},
+				{
+					Color: 0xFF69B4,
+					Title: strings.ToUpper(attackerMember.Nick) + " FUCKING DIES",
+				},
+				{
+					Color: 0xFF69B4,
+					Title: strings.ToUpper(attackerMember.Nick) + " FUCKING DIES",
+				},
+				{
+					Color: 0xFF69B4,
+					Title: strings.ToUpper(attackerMember.Nick) + " FUCKING DIES",
+				},
+			},
+		})
+	}
+
+	max := len(msg.Embeds) - 1
+	for range max {
+		counter := 5
+		for counter != 0 {
+			countdownString := fmt.Sprintf("ELIMINATING ONE OPTION IN %v", counter)
+			msg, _ = s.ChannelMessageEditComplex(&discordgo.MessageEdit{
+				ID:      msg.ID,
+				Channel: msg.ChannelID,
+				Content: &countdownString,
+			})
+			counter--
+			time.Sleep(1 * time.Second)
+		}
+
+		rng := rand.Intn(max + 1)
+		max--
+		countdownString := fmt.Sprintf("ELIMINATING ONE OPTION IN %v", counter)
+		embeds := msg.Embeds
+		embeds = append(embeds[:rng], embeds[rng+1:]...)
+		msg, _ = s.ChannelMessageEditComplex(&discordgo.MessageEdit{
+			ID:      msg.ID,
+			Channel: msg.ChannelID,
+			Content: &countdownString,
+			Embeds:  &embeds,
+		})
+	}
+
+	emptyString := ""
+	s.ChannelMessageEditComplex(&discordgo.MessageEdit{
+		ID:      msg.ID,
+		Channel: msg.ChannelID,
+		Content: &emptyString,
+		Embeds:  &msg.Embeds,
+	})
+
+	switch strings.Split(msg.Embeds[0].Title, " FUCKING")[0] {
+	case strings.ToUpper(attackerMember.Nick):
+		Execute(s, attackerID, msg.ChannelID, false)
+	case strings.ToUpper(victimMember.Nick):
+		Execute(s, victimID, msg.ChannelID, false)
+	case "BOTH":
+		Execute(s, attackerID, msg.ChannelID, false)
+		Execute(s, victimID, msg.ChannelID, false)
+	}
+}
+
 func Revive(s *discordgo.Session, userID string, channelID string) {
 	member := Member(s, userID)
 	for i, executee := range executees {
@@ -69,6 +165,77 @@ func Revive(s *discordgo.Session, userID string, channelID string) {
 	}
 
 	sender.SendMessage(s, channelID, fmt.Sprintf("%v has been revived!", member.Mention()))
+}
+
+func GambleRevive(s *discordgo.Session, i *discordgo.InteractionCreate, sacrificerID string, victimID string) {
+	attackerMember, _ := s.GuildMember(i.GuildID, sacrificerID)
+	victimMember, _ := s.GuildMember(i.GuildID, victimID)
+
+	msg, _ := s.ChannelMessageSendComplex(i.ChannelID, &discordgo.MessageSend{
+		Embeds: []*discordgo.MessageEmbed{
+			{
+				Color: 0xFF69B4,
+				Title: strings.ToUpper(attackerMember.Nick) + " FUCKING DIES",
+			},
+			{
+				Color: 0xFF69B4,
+				Title: strings.ToUpper(victimMember.Nick) + " FUCKING LIVES",
+			},
+			{
+				Color: 0xFF69B4,
+				Title: "SOUL FUCKING TRADE",
+			},
+			{
+				Color: 0xFF69B4,
+				Title: "NOTHING FUCKING HAPPENS",
+			},
+		},
+	})
+
+	max := len(msg.Embeds) - 1
+	for range max {
+		counter := 5
+		for counter != 0 {
+			countdownString := fmt.Sprintf("ELIMINATING ONE OPTION IN %v", counter)
+			msg, _ = s.ChannelMessageEditComplex(&discordgo.MessageEdit{
+				ID:      msg.ID,
+				Channel: msg.ChannelID,
+				Content: &countdownString,
+			})
+			counter--
+			time.Sleep(1 * time.Second)
+		}
+
+		rng := rand.Intn(max + 1)
+		max--
+		countdownString := fmt.Sprintf("ELIMINATING ONE OPTION IN %v", counter)
+		embeds := msg.Embeds
+		embeds = append(embeds[:rng], embeds[rng+1:]...)
+		msg, _ = s.ChannelMessageEditComplex(&discordgo.MessageEdit{
+			ID:      msg.ID,
+			Channel: msg.ChannelID,
+			Content: &countdownString,
+			Embeds:  &embeds,
+		})
+	}
+
+	emptyString := ""
+	s.ChannelMessageEditComplex(&discordgo.MessageEdit{
+		ID:      msg.ID,
+		Channel: msg.ChannelID,
+		Content: &emptyString,
+		Embeds:  &msg.Embeds,
+	})
+
+	switch strings.Split(msg.Embeds[0].Title, " FUCKING")[0] {
+	case strings.ToUpper(attackerMember.Nick):
+		Execute(s, sacrificerID, msg.ChannelID, false)
+	case strings.ToUpper(victimMember.Nick):
+		Revive(s, victimID, msg.ChannelID)
+	case "SOUL":
+		Execute(s, sacrificerID, msg.ChannelID, false)
+		Revive(s, victimID, msg.ChannelID)
+	}
 }
 
 func ReviveAll(s *discordgo.Session, channelID string) {
@@ -132,4 +299,8 @@ func CheckAndDeleteExecuteeTupperMessage(s *discordgo.Session, m *discordgo.Mess
 func Member(s *discordgo.Session, userID string) *discordgo.Member {
 	member, _ := s.GuildMember(secrets.GuildID, userID)
 	return member
+}
+
+func IsAdminAbuser(m *discordgo.Member) bool {
+	return m.User.ID == "920342100468436993" || m.User.ID == "1079774043684745267" || m.User.ID == "952145898824138792"
 }

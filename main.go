@@ -60,10 +60,10 @@ func main() {
 		fmt.Printf("\nReceived signal: %v\n", sig)
 
 		// Perform any cleanup here if needed
-		fmt.Print("|   Reviving all executed members...")
+		fmt.Print("|   Reviving all executed members... ")
 		execution.ReviveAll(session, "1196943729387372634")
 		fmt.Println("Done")
-		fmt.Print("|   Cancelling polls...")
+		fmt.Print("|   Cancelling polls... ")
 		polls.CancelAll()
 		fmt.Println("Done")
 		session.ChannelMessageSendComplex("1196943729387372634", &discordgo.MessageSend{

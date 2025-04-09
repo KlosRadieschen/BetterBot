@@ -81,7 +81,8 @@ func CreateOptionsPoll(s *discordgo.Session, creatorID string, multioption bool,
 func WaitAndEvaluate(s *discordgo.Session, pollID string, ctx context.Context) {
 	thread, _ := s.MessageThreadStart(pollChannelID, pollID, "Discussion", 60)
 	<-ctx.Done()
-	updatePollMessage(s, pollID, true)
+	endTime, _ := ctx.Deadline()
+	updatePollMessage(s, pollID, true, !time.Now().After(endTime))
 
 	allVotes, _ := GetAllVotesEmbeds(s, pollID)
 	s.ChannelMessageSendComplex(thread.ID, &discordgo.MessageSend{Embeds: allVotes})
@@ -103,7 +104,7 @@ func AddVote(s *discordgo.Session, id string, voterID string, optionNumber int) 
 		handleMultiOptionVote(poll, voterID, voterNums, hasVoted, optionNumber)
 	}
 
-	updatePollMessage(s, id, false)
+	updatePollMessage(s, id, false, false)
 	return nil
 }
 
@@ -142,7 +143,7 @@ func removeElement(slice []int, element int) []int {
 	return append(slice[:index], slice[index+1:]...)
 }
 
-func updatePollMessage(s *discordgo.Session, pollID string, isOver bool) {
+func updatePollMessage(s *discordgo.Session, pollID string, isOver bool, isCancelled bool) {
 	poll, _ := s.ChannelMessage(pollChannelID, pollID)
 	votesSum := GetVotesSum(pollID)
 
@@ -172,7 +173,13 @@ func updatePollMessage(s *discordgo.Session, pollID string, isOver bool) {
 
 	var edit discordgo.MessageEdit
 	if isOver {
-		newContent := strings.Replace(poll.Content, "expires", "expired", -1)
+		var newContent string
+		if !isCancelled {
+			newContent = strings.Replace(poll.Content, "expires", "expired", -1)
+		} else {
+			newContent = strings.Replace(poll.Content, "expires", "expired", -1) + " (poll ended early)"
+		}
+
 		edit = discordgo.MessageEdit{
 			Channel: poll.ChannelID,
 			ID:      poll.ID,

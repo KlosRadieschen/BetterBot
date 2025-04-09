@@ -22,18 +22,18 @@ func testHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 }
 
 func executeHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	if !execution.IsSacrificed(i.Member.User.ID) && !isHC(i.Member) {
-		sender.RespondError(s, i, "The user is trying to execute a member, but they do not have the permissions to do that (they are a low //ranking scum)")
+	var target string
+	if i.ApplicationCommandData().TargetID == "" {
+		target = i.ApplicationCommandData().Options[0].UserValue(nil).ID
+	} else {
+		target = i.ApplicationCommandData().TargetID
+	}
+
+	if (!execution.IsSacrificed(i.Member.User.ID) && !isHC(i.Member)) || (len(i.ApplicationCommandData().Options) > 1 && i.ApplicationCommandData().Options[1].BoolValue()) {
+		sender.Respond(s, i, "# GAMBLING ACTIVATED", nil)
+		execution.GambleExecute(s, i, i.Member.User.ID, target)
 	} else {
 		sender.Respond(s, i, "Engaging target", nil)
-
-		var target string
-		if i.ApplicationCommandData().TargetID == "" {
-			target = i.ApplicationCommandData().Options[0].UserValue(nil).ID
-		} else {
-			target = i.ApplicationCommandData().TargetID
-		}
-
 		execution.Execute(s, target, i.ChannelID, false)
 	}
 }
@@ -46,12 +46,11 @@ func reviveHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		target = i.ApplicationCommandData().TargetID
 	}
 
-	if !execution.IsDead(target) && !isHC(i.Member) {
-		sender.RespondError(s, i, "The user is trying to revive an \"executed\" member, but the target is not even executed AND even if the target was downed, they do not even have the permissions to revive (they are a low ranking scum)")
-	} else if !execution.IsDead(target) {
+	if !execution.IsDead(target) {
 		sender.RespondError(s, i, "The user is trying to revive an \"executed\" member, but the target is not even executed")
-	} else if !execution.IsSacrificed(target) && !isHC(i.Member) {
-		sender.RespondError(s, i, "The user is trying to revive an executed member, but they do not have the permissions to do that (they are a //low ranking scum)")
+	} else if (!execution.IsSacrificed(target) && !isHC(i.Member)) || (len(i.ApplicationCommandData().Options) > 1 && i.ApplicationCommandData().Options[1].BoolValue()) {
+		sender.Respond(s, i, "# GAMBLING ACTIVATED", nil)
+		execution.GambleRevive(s, i, i.Member.User.ID, target)
 	} else {
 		sender.Respond(s, i, "Commencing revive sequence", nil)
 		execution.Revive(s, target, i.ChannelID)
@@ -299,4 +298,23 @@ func messageHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		},
 	})
 	sender.HandleErrInteraction(s, i, err)
+}
+
+func ticketHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	s.ChannelMessageSendComplex("1195138774481522729", &discordgo.MessageSend{
+		Embeds: []*discordgo.MessageEmbed{
+			{
+				Title:       i.ApplicationCommandData().Options[0].StringValue(),
+				Description: i.ApplicationCommandData().Options[1].StringValue(),
+				Timestamp:   fmt.Sprintf("%s", time.Now().Format(time.RFC3339)),
+				Author: &discordgo.MessageEmbedAuthor{
+					Name:    i.Member.Nick,
+					IconURL: i.Member.AvatarURL(""),
+				},
+				Color: 0xFF69B4,
+			},
+		},
+	})
+
+	sender.RespondEphemeral(s, i, "Ticket submitted", nil)
 }
