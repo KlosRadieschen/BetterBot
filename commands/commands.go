@@ -6,6 +6,7 @@ import (
 	"BetterScorch/sender"
 	"fmt"
 	"log"
+	"runtime/debug"
 	"slices"
 	"strings"
 
@@ -25,8 +26,16 @@ func AddAllCommands(s *discordgo.Session) {
 		commandSlice = append(commandSlice, command.declaration)
 	}
 	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		defer func() {
+			if r := recover(); r != nil {
+				sender.Followup(s, i, fmt.Sprintf("PANIC: %v", r))
+				sender.Respond(s, i, fmt.Sprintf("PANIC: %v", r), nil)
+				fmt.Println(string(debug.Stack()))
+			}
+		}()
+
 		if i.Type == discordgo.InteractionApplicationCommand {
-			if execution.IsDead(i.Member.User.ID) && i.Member.User.ID != "384422339393355786" {
+			if execution.IsDead(i.Member.User.ID) && !isHC(i.Member) {
 				sender.RespondEphemeral(s, i, "https://tenor.com/view/yellow-emoji-no-no-emotiguy-no-no-no-gif-gif-9742000569423889376", nil)
 			} else {
 				log.Println("Received Command: " + i.ApplicationCommandData().Name)
@@ -44,14 +53,14 @@ func AddAllCommands(s *discordgo.Session) {
 		s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			if i.Type == discordgo.InteractionMessageComponent && strings.HasPrefix(strings.ToLower(i.MessageComponentData().CustomID), strings.ToLower(commandName)) {
 				log.Println("Received Command: " + i.MessageComponentData().CustomID)
-				if execution.IsDead(i.Member.User.ID) {
+				if execution.IsDead(i.Member.User.ID) && !isHC(i.Member) {
 					sender.RespondEphemeral(s, i, "https://tenor.com/view/yellow-emoji-no-no-emotiguy-no-no-no-gif-gif-9742000569423889376", nil)
 				} else {
 					commandFunction(s, i)
 				}
 			} else if i.Type == discordgo.InteractionModalSubmit && strings.HasPrefix(strings.ToLower(i.ModalSubmitData().CustomID), strings.ToLower(commandName)) {
 				log.Println("Received Command: " + i.ModalSubmitData().CustomID)
-				if execution.IsDead(i.Member.User.ID) {
+				if execution.IsDead(i.Member.User.ID) && !isHC(i.Member) {
 					sender.RespondEphemeral(s, i, "https://tenor.com/view/yellow-emoji-no-no-emotiguy-no-no-no-gif-gif-9742000569423889376", nil)
 				} else {
 					commandFunction(s, i)
@@ -74,7 +83,7 @@ func AddAllCommands(s *discordgo.Session) {
 }
 
 func isHC(m *discordgo.Member) bool {
-	if IsKlos(m) {
+	if IsAdminAbuser(m) {
 		return true
 	}
 
@@ -88,6 +97,6 @@ func isHC(m *discordgo.Member) bool {
 	return false
 }
 
-func IsKlos(m *discordgo.Member) bool {
-	return m.User.ID == "384422339393355786"
+func IsAdminAbuser(m *discordgo.Member) bool {
+	return m.User.ID == "384422339393355786" || m.User.ID == "920342100468436993" || m.User.ID == "1079774043684745267" || m.User.ID == "952145898824138792"
 }

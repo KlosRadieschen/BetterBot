@@ -27,6 +27,19 @@ var Msgs = make(map[string]*list.List)
 var UserMessages = []UserMessage{}
 
 func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
+	defer func() {
+		if r := recover(); r != nil {
+			s.ChannelMessageSendComplex("1196943729387372634", &discordgo.MessageSend{
+				Embeds: []*discordgo.MessageEmbed{
+					{
+						Title: fmt.Sprintf("PANIC: %v", r),
+						Color: 0xFF69B4,
+					},
+				},
+			})
+		}
+	}()
+
 	channel, _ := s.Channel(m.ChannelID)
 
 	if Msgs[m.Author.ID] == nil {
@@ -40,6 +53,9 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	go checkAndSendUserMessages(s, m)
 
 	if m.Author.Bot || execution.CheckAndDeleteExecuteeMessage(s, m) || Sleeping || (channel.ParentID != "1234128503968891032" && channel.ParentID != "1300423257262133280") {
+		if m.Author.Bot {
+			execution.CheckAndDeleteExecuteeTupperMessage(s, m, Msgs)
+		}
 		return
 	}
 
@@ -97,7 +113,7 @@ func checkAndSendUserMessages(s *discordgo.Session, m *discordgo.MessageCreate) 
 				},
 			}
 
-			s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{Embeds: []*discordgo.MessageEmbed{&embed}})
+			s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{Reference: m.Reference(), Embeds: []*discordgo.MessageEmbed{&embed}})
 			UserMessages = slices.DeleteFunc(UserMessages, func(um UserMessage) bool {
 				return um.SenderName == userMessage.SenderName
 			})

@@ -2,6 +2,7 @@ package polls
 
 import (
 	"BetterScorch/secrets"
+	"context"
 	"fmt"
 	"math"
 	"strings"
@@ -13,12 +14,14 @@ import (
 type inputPoll struct {
 	votes       map[string][]string
 	multioption bool
+	cancel      func()
 }
 
 var inputPolls = make(map[string]*inputPoll)
 
-func CreateInputPoll(s *discordgo.Session, creatorID string, multioption bool, endTime time.Time, question string) string {
+func CreateInputPoll(s *discordgo.Session, creatorID string, multioption bool, endTime time.Time, question string) (string, context.Context) {
 	member, _ := s.GuildMember(secrets.GuildID, creatorID)
+	ctx, cancelFunc := context.WithTimeout(context.Background(), endTime.Sub(time.Now()))
 
 	var pollTypeString string
 	if multioption {
@@ -55,9 +58,9 @@ func CreateInputPoll(s *discordgo.Session, creatorID string, multioption bool, e
 		},
 	})
 
-	inputPolls[pollMsg.ID] = &inputPoll{votes: make(map[string][]string), multioption: multioption}
+	inputPolls[pollMsg.ID] = &inputPoll{votes: make(map[string][]string), multioption: multioption, cancel: cancelFunc}
 
-	return pollMsg.ID
+	return pollMsg.ID, ctx
 }
 
 func SubmitInputPollResponse(s *discordgo.Session, id string, voterID string, response string) error {
@@ -74,9 +77,10 @@ func SubmitInputPollResponse(s *discordgo.Session, id string, voterID string, re
 	return nil
 }
 
-func WaitAndEvaluateInput(s *discordgo.Session, pollID string, endTime time.Time) {
+func WaitAndEvaluateInput(s *discordgo.Session, pollID string, ctx context.Context) {
 	thread, _ := s.MessageThreadStart(pollChannelID, pollID, "Discussion", 60)
-	time.Sleep(endTime.Sub(time.Now()))
+
+	<-ctx.Done()
 
 	poll, _ := s.ChannelMessage(pollChannelID, pollID)
 	newContent := strings.Replace(poll.Content, "expires", "expired", -1)
@@ -133,4 +137,13 @@ func GetNumberOfInputs(pollID string) int {
 		}
 	}
 	return sum
+}
+
+func CancelAll() {
+	for _, poll := range inputPolls {
+		poll.cancel()
+	}
+	for _, poll := range optionPolls {
+		poll.cancel()
+	}
 }

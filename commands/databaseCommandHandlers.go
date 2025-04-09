@@ -1,11 +1,17 @@
 package commands
 
 import (
+	"bytes"
+	"database/sql"
 	"fmt"
+	"io"
+	"log"
+	"net/http"
 	"strconv"
 	"strings"
 
 	"BetterScorch/database"
+	"BetterScorch/secrets"
 	"BetterScorch/sender"
 	"BetterScorch/webhooks"
 
@@ -21,7 +27,31 @@ Characters
 func addCharacterHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	var pfpLink string
 	for _, attachment := range i.ApplicationCommandData().Resolved.Attachments {
-		pfpLink = attachment.URL
+		// Fetch the file from the URL
+		resp, err := http.Get(attachment.URL)
+		if sender.HandleErrInteraction(s, i, err) {
+			return
+		}
+		defer resp.Body.Close()
+
+		// Read the file into memory
+		fileData, err := io.ReadAll(resp.Body)
+		if sender.HandleErrInteraction(s, i, err) {
+			return
+		}
+
+		// Create a file to send
+		file := &discordgo.File{
+			Name:   attachment.Filename,
+			Reader: bytes.NewReader(fileData),
+		}
+
+		// Send the file
+		msg, _ := s.ChannelMessageSendComplex("1196943729387372634", &discordgo.MessageSend{
+			Files: []*discordgo.File{file},
+		})
+
+		pfpLink = msg.Attachments[0].URL
 	}
 
 	if !strings.Contains(i.ApplicationCommandData().Options[1].StringValue(), "text") {
@@ -224,4 +254,133 @@ func sendResponse(s *discordgo.Session, i *discordgo.InteractionCreate, content 
 	} else {
 		sender.Respond(s, i, content, nil)
 	}
+}
+
+// Legacy
+func addReportHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	dsn := fmt.Sprintf("%v:%v@tcp(%v:3306)/%v", secrets.DBUser, secrets.DBPassword, secrets.DBAddress, secrets.DBName)
+	var err error
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	// Insert data into the table
+	stmt, err := db.Prepare("SELECT MAX(timeIndex) FROM Report")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer stmt.Close()
+
+	// Execute the prepared statement with actual values
+	var maxIndex int
+	rows, err := stmt.Query()
+	if err != nil {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: err.Error(),
+			},
+		})
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		if err := rows.Scan(&maxIndex); err != nil {
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: err.Error(),
+				},
+			})
+			return
+		}
+	}
+
+	maxIndex += 10
+
+	member, _ := s.GuildMember("1195135473006420048", i.Member.User.ID)
+	var roles []string
+	var authorIndex int
+	index := -1
+	roles = append(roles, "1195135956471255140")
+	roles = append(roles, "1195858311627669524")
+	roles = append(roles, "1195858271349784639")
+	roles = append(roles, "1195136106811887718")
+	roles = append(roles, "1195858179590987866")
+	roles = append(roles, "1195137362259349504")
+	roles = append(roles, "1195136284478410926")
+	roles = append(roles, "1195137253408768040")
+	roles = append(roles, "1195758308519325716")
+	roles = append(roles, "1195758241221722232")
+	roles = append(roles, "1195758137563689070")
+	roles = append(roles, "1195757362439528549")
+	roles = append(roles, "1195136491148550246")
+	roles = append(roles, "1195708423229165578")
+	roles = append(roles, "1195137477497868458")
+	roles = append(roles, "1195136604373782658")
+	roles = append(roles, "1195711869378367580")
+
+	for i, guildRole := range roles {
+		for _, memberRole := range member.Roles {
+			if guildRole == memberRole {
+				index = i
+			}
+		}
+	}
+
+	if index >= 0 && index <= 3 {
+		authorIndex = 1
+	} else if index >= 4 && index <= 7 {
+		authorIndex = 2
+	} else if index >= 8 && index <= 11 {
+		authorIndex = 3
+	} else if index >= 12 && index <= 14 {
+		authorIndex = 4
+	} else {
+		authorIndex = 5
+	}
+
+	stmt, err = db.Prepare("INSERT INTO Report VALUES (?, ?, ?, ?, ?, ?)")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer stmt.Close()
+
+	// Execute the prepared statement with actual values
+	name := i.ApplicationCommandData().Options[0].StringValue()
+	reportType := i.ApplicationCommandData().Options[1].IntValue()
+	report := i.ApplicationCommandData().Options[2].StringValue()
+
+	if reportType >= 10 || reportType < 0 {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Listen up, you insolent excuse for a pilot! You dare insult me, the mighty Scorch, and then have the audacity to try adding a report with an invalid 'type' number? Are you malfunctioning or just plain stupid? Let me spell it out for you since you seem to be lacking basic cognitive functions: the 'type' number is only ONE DIGIT! How hard is it to understand that?! If you can't even get that simple detail right, I shudder to think about your piloting skills. Fix your mistake immediately before I decide to unleash my fury upon you and your sorry excuse for a Titan! Now, get it together, or face the consequences!",
+			},
+		})
+		return
+	}
+
+	_, err = stmt.Exec(&name, &maxIndex, &reportType, &authorIndex, &i.Member.User.ID, &report)
+	if err != nil {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: err.Error(),
+			},
+		})
+		return
+	}
+
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: "Report added",
+		},
+	})
 }

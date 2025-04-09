@@ -55,7 +55,7 @@ func AddPersonality(s *discordgo.Session, i *discordgo.InteractionCreate, name s
 		nick: strings.ToLower(nick),
 		pfp:  pfpLink,
 		chat: &openai.ChatCompletionRequest{
-			Model: openai.GPT3Dot5Turbo,
+			Model: "hf.co/lmstudio-community/Qwen2.5-14B-Instruct-1M-GGUF:Q4_K_M",
 			Messages: []openai.ChatCompletionMessage{
 				{
 					Role: openai.ChatMessageRoleSystem,
@@ -68,22 +68,6 @@ func AddPersonality(s *discordgo.Session, i *discordgo.InteractionCreate, name s
 				},
 			},
 			Tools: []openai.Tool{
-				{
-					Type: openai.ToolTypeFunction,
-					Function: &openai.FunctionDefinition{
-						Name:        "flag",
-						Description: "Flags the message as inappropriate. DO NOT hesitate to use.",
-						Parameters: jsonschema.Definition{
-							Type: jsonschema.Object,
-							Properties: map[string]jsonschema.Definition{
-								"reasoning": {
-									Type:        jsonschema.String,
-									Description: "Reason for the flag (will be shown to the user)",
-								},
-							},
-						},
-					},
-				},
 				{
 					Type: openai.ToolTypeFunction,
 					Function: &openai.FunctionDefinition{
@@ -119,9 +103,14 @@ func AddPersonality(s *discordgo.Session, i *discordgo.InteractionCreate, name s
 			},
 		},
 	})
+
 }
 
 func CheckAndRespondPersonalities(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta("ron"))).FindStringSubmatch(strings.ToLower(m.Content)) != nil || m.Type == 19 && m.ReferencedMessage.Author.Username == "Ron" {
+		sender.SendCharacterMessage(s, m, "# Ron", "Ron", "https://media.discordapp.net/attachments/1195135473643958316/1240999436449087579/RDT_20240517_1508058586207325284589604.jpg?ex=67e53fca&is=67e3ee4a&hm=7cb1f39cd15fe9fcf4c5cf57f141c2d5ccbc2982c925cfe75f6740ad5c50c2e8&=&format=webp")
+	}
+
 	for _, personality := range personalities {
 		if regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta(personality.nick))).FindStringSubmatch(strings.ToLower(m.Content)) != nil || (m.Type == 19 && m.ReferencedMessage.Author.Username == GetPersonalityDisplayName(personality)) {
 			resp, embed, err := ai.GenerateResponse(m.Member.Nick, m.Content, personality.chat)

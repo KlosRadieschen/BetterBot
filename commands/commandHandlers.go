@@ -23,7 +23,7 @@ func testHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 func executeHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if !execution.IsSacrificed(i.Member.User.ID) && !isHC(i.Member) {
-		sender.RespondError(s, i, "The user is trying to execute a member, but they do not have the permissions to do that (they are a low ranking scum)")
+		sender.RespondError(s, i, "The user is trying to execute a member, but they do not have the permissions to do that (they are a low //ranking scum)")
 	} else {
 		sender.Respond(s, i, "Engaging target", nil)
 
@@ -51,10 +51,19 @@ func reviveHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	} else if !execution.IsDead(target) {
 		sender.RespondError(s, i, "The user is trying to revive an \"executed\" member, but the target is not even executed")
 	} else if !execution.IsSacrificed(target) && !isHC(i.Member) {
-		sender.RespondError(s, i, "The user is trying to revive an executed member, but they do not have the permissions to do that (they are a low ranking scum)")
+		sender.RespondError(s, i, "The user is trying to revive an executed member, but they do not have the permissions to do that (they are a //low ranking scum)")
 	} else {
 		sender.Respond(s, i, "Commencing revive sequence", nil)
 		execution.Revive(s, target, i.ChannelID)
+	}
+}
+
+func reviveAllHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	if !isHC(i.Member) {
+		sender.RespondError(s, i, "The user is trying to revive all executed members, but they do not have the permissions to do that (they are a low ranking scum)")
+	} else {
+		sender.Respond(s, i, "Commencing revive sequence", nil)
+		execution.ReviveAll(s, i.ChannelID)
 	}
 }
 
@@ -67,9 +76,9 @@ func pollHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	endTime := time.Now().Add(time.Duration(i.Interaction.ApplicationCommandData().Options[2].IntValue()) * time.Minute)
 
-	pollID := polls.CreateOptionsPoll(s, i.Member.User.ID, i.Interaction.ApplicationCommandData().Options[1].BoolValue(), endTime, i.Interaction.ApplicationCommandData().Options[0].StringValue(), pollOptions...)
+	pollID, ctx := polls.CreateOptionsPoll(s, i.Member.User.ID, i.Interaction.ApplicationCommandData().Options[1].BoolValue(), endTime, i.Interaction.ApplicationCommandData().Options[0].StringValue(), pollOptions...)
 	sender.Followup(s, i, "Poll created")
-	polls.WaitAndEvaluate(s, pollID, endTime)
+	polls.WaitAndEvaluate(s, pollID, ctx)
 }
 
 func inputPollHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -77,9 +86,9 @@ func inputPollHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	endTime := time.Now().Add(time.Duration(i.Interaction.ApplicationCommandData().Options[2].IntValue()) * time.Minute)
 
-	pollID := polls.CreateInputPoll(s, i.Member.User.ID, i.Interaction.ApplicationCommandData().Options[1].BoolValue(), endTime, i.Interaction.ApplicationCommandData().Options[0].StringValue())
+	pollID, ctx := polls.CreateInputPoll(s, i.Member.User.ID, i.Interaction.ApplicationCommandData().Options[1].BoolValue(), endTime, i.Interaction.ApplicationCommandData().Options[0].StringValue())
 	sender.Followup(s, i, "Poll created")
-	polls.WaitAndEvaluateInput(s, pollID, endTime)
+	polls.WaitAndEvaluateInput(s, pollID, ctx)
 }
 
 func toggleSleepHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -102,6 +111,7 @@ func statusHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 func rollHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	max := 20
 	reason := ""
+	modifier := 0
 
 	for _, option := range i.ApplicationCommandData().Options {
 		switch option.Name {
@@ -109,10 +119,21 @@ func rollHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			max = int(option.IntValue())
 		case "reason":
 			reason = fmt.Sprintf("Rolling for %v\n", option.StringValue())
+		case "modifier":
+			modifier = int(option.IntValue())
 		}
 	}
 
-	sender.Respond(s, i, fmt.Sprintf("%v%v/%v", reason, rand.Intn(max)+1, max), nil)
+	value := rand.Intn(max) + 1
+	if modifier == 0 {
+		sender.Respond(s, i, fmt.Sprintf("%v%v/%v", reason, value, max), nil)
+	} else {
+		if modifier > 0 {
+			sender.Respond(s, i, fmt.Sprintf("%v%v(%v+%v)/%v", reason, value+modifier, value, modifier, max), nil)
+		} else {
+			sender.Respond(s, i, fmt.Sprintf("%v%v(%v%v)/%v", reason, value+modifier, value, modifier, max), nil)
+		}
+	}
 }
 
 func addPersonalityHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {

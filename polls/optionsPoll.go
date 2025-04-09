@@ -2,6 +2,7 @@ package polls
 
 import (
 	"BetterScorch/secrets"
+	"context"
 	"fmt"
 	"slices"
 	"strings"
@@ -15,6 +16,7 @@ type optionPoll struct {
 	votes       []int
 	voters      map[string][]int
 	multioption bool
+	cancel      func()
 }
 
 const pollChannelID = "1203821534175825942"
@@ -22,9 +24,10 @@ const pollChannelID = "1203821534175825942"
 var optionPolls = make(map[string]*optionPoll)
 var PollMutex sync.Mutex
 
-func CreateOptionsPoll(s *discordgo.Session, creatorID string, multioption bool, endTime time.Time, question string, options ...string) string {
+func CreateOptionsPoll(s *discordgo.Session, creatorID string, multioption bool, endTime time.Time, question string, options ...string) (string, context.Context) {
 	emojis := []string{"🔥", "🍷", "💀", "👻", "🎶"}
 	votes := []int{}
+	ctx, cancelFunc := context.WithTimeout(context.Background(), endTime.Sub(time.Now()))
 
 	row := discordgo.ActionsRow{}
 	for i, option := range options {
@@ -70,14 +73,14 @@ func CreateOptionsPoll(s *discordgo.Session, creatorID string, multioption bool,
 		},
 	})
 
-	optionPolls[pollMsg.ID] = &optionPoll{votes: votes, voters: make(map[string][]int), multioption: multioption}
+	optionPolls[pollMsg.ID] = &optionPoll{votes: votes, voters: make(map[string][]int), multioption: multioption, cancel: cancelFunc}
 
-	return pollMsg.ID
+	return pollMsg.ID, ctx
 }
 
-func WaitAndEvaluate(s *discordgo.Session, pollID string, endTime time.Time) {
+func WaitAndEvaluate(s *discordgo.Session, pollID string, ctx context.Context) {
 	thread, _ := s.MessageThreadStart(pollChannelID, pollID, "Discussion", 60)
-	time.Sleep(endTime.Sub(time.Now()))
+	<-ctx.Done()
 	updatePollMessage(s, pollID, true)
 
 	allVotes, _ := GetAllVotesEmbeds(s, pollID)

@@ -3,8 +3,11 @@ package execution
 import (
 	"BetterScorch/secrets"
 	"BetterScorch/sender"
+	"container/list"
 	"fmt"
 	"slices"
+	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -14,6 +17,7 @@ type executee struct {
 	count      int
 	role       string
 	sacrificed bool
+	startTime  time.Time
 }
 
 var executees = []executee{}
@@ -45,6 +49,7 @@ func Execute(s *discordgo.Session, userID string, channelID string, sacrificed b
 		count:      1,
 		role:       roleID,
 		sacrificed: sacrificed,
+		startTime:  time.Now(),
 	})
 	sender.SendMessage(s, channelID, fmt.Sprintf("%v is fucking dead", Member(s, userID).Mention()))
 }
@@ -66,30 +71,62 @@ func Revive(s *discordgo.Session, userID string, channelID string) {
 	sender.SendMessage(s, channelID, fmt.Sprintf("%v has been revived!", member.Mention()))
 }
 
+func ReviveAll(s *discordgo.Session, channelID string) {
+	for i, executee := range executees {
+		member := Member(s, executee.id)
+		for range executee.count {
+			sender.SendMessage(s, channelID, fmt.Sprintf("%v\nhttps://tenor.com/view/cat-revive-friends-animated-friendship-gif-8246087956711984034", member.Mention()))
+		}
+		s.GuildMemberRoleRemove(secrets.GuildID, executee.id, "1253410294999548046")
+		s.GuildMemberRoleAdd(secrets.GuildID, executee.id, executee.role)
+		executees = append(executees[:i], executees[i+1:]...)
+	}
+
+	sender.SendMessage(s, channelID, "Everyone has been revived!")
+}
+
 func IsDead(userID string) bool {
+	return getExecutee(userID) != nil
+}
+
+func IsSacrificed(userID string) bool {
+	e := getExecutee(userID)
+	if e != nil {
+		return e.sacrificed
+	}
+	return false
+}
+
+func getExecutee(userID string) *executee {
 	for _, executee := range executees {
 		if executee.id == userID {
+			return &executee
+		}
+	}
+	return nil
+}
+
+func CheckAndDeleteExecuteeMessage(s *discordgo.Session, m *discordgo.MessageCreate) bool {
+	if IsDead(m.Author.ID) {
+		if time.Since(getExecutee(m.Author.ID).startTime) > 30*time.Minute {
+			sender.SendMessage(s, "1196943729387372634", "Automatically reviving "+Member(s, m.Author.ID).Mention())
+			Revive(s, m.Author.ID, "1196943729387372634")
+		} else {
+			s.ChannelMessageDelete(m.ChannelID, m.ID)
 			return true
 		}
 	}
 	return false
 }
 
-func IsSacrificed(userID string) bool {
+func CheckAndDeleteExecuteeTupperMessage(s *discordgo.Session, m *discordgo.MessageCreate, msgs map[string]*list.List) {
 	for _, executee := range executees {
-		if executee.id == userID {
-			return executee.sacrificed
+		if msgs[executee.id] != nil && strings.Contains(msgs[executee.id].Back().Value.(*discordgo.Message).Content, m.Content) {
+			println(msgs[executee.id].Back().Value.(*discordgo.Message).Content)
+			s.ChannelMessageDelete(m.ChannelID, m.ID)
+			return
 		}
 	}
-	return false
-}
-
-func CheckAndDeleteExecuteeMessage(s *discordgo.Session, m *discordgo.MessageCreate) bool {
-	if IsDead(m.Author.ID) {
-		s.ChannelMessageDelete(m.ChannelID, m.ID)
-		return true
-	}
-	return false
 }
 
 func Member(s *discordgo.Session, userID string) *discordgo.Member {

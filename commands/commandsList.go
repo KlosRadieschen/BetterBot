@@ -45,6 +45,13 @@ var commands = map[string]command{
 		},
 		handler: reviveHandler,
 	},
+	"reviveall": {
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "reviveall",
+			Description: "Admin abuse my beloved",
+		},
+		handler: reviveAllHandler,
+	},
 
 	/*
 
@@ -332,6 +339,18 @@ var commands = map[string]command{
 		},
 		handler: getReportHandler,
 	},
+	"addreport": {
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "addreport",
+			Description: "Add a report",
+			Options: []*discordgo.ApplicationCommandOption{
+				stringOption("name", "Name of the report", true),
+				intOption("type", "Type of the report (number)", true),
+				stringOption("text", "Actual text of the report", true),
+			},
+		},
+		handler: addReportHandler,
+	},
 
 	/*
 
@@ -384,6 +403,7 @@ var commands = map[string]command{
 			Options: []*discordgo.ApplicationCommandOption{
 				intOption("max", "The highest number the dice can get (default: 20)", false),
 				stringOption("reason", "What you are rolling for", false),
+				intOption("modifier", "The modifier that you have", false),
 			},
 		},
 		handler: rollHandler,
