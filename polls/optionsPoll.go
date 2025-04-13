@@ -4,6 +4,7 @@ import (
 	"BetterScorch/secrets"
 	"context"
 	"fmt"
+	"log/slog"
 	"slices"
 	"strings"
 	"sync"
@@ -81,6 +82,9 @@ func CreateOptionsPoll(s *discordgo.Session, creatorID string, multioption bool,
 func WaitAndEvaluate(s *discordgo.Session, pollID string, ctx context.Context) {
 	thread, _ := s.MessageThreadStart(pollChannelID, pollID, "Discussion", 60)
 	<-ctx.Done()
+
+	slog.Info("Poll ended", "pollType", "Options-poll", "ID", pollID)
+
 	endTime, _ := ctx.Deadline()
 	updatePollMessage(s, pollID, true, !time.Now().After(endTime))
 

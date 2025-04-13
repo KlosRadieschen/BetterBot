@@ -378,6 +378,82 @@ var commands = map[string]command{
 
 	/*
 
+		Stonks
+
+	*/
+
+	"balance": {
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "balance",
+			Description: "get your current ScorchCoin balance",
+		},
+		handler: balanceHandler,
+	},
+	"gamble": {
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "gamble",
+			Description: "GAMBLE",
+			Options: []*discordgo.ApplicationCommandOption{
+				intOption("amount", "The amount of Scorchcoin you want to gamble", true),
+				{
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Name:        "option",
+					Description: "How you want to gamble your money",
+					Required:    true,
+					Choices: []*discordgo.ApplicationCommandOptionChoice{
+						{
+							Name:  "coinflip",
+							Value: 0,
+						},
+					},
+				},
+			},
+		},
+		handler: gambleHandler,
+	},
+	"entereconomy": {
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "entereconomy",
+			Description: "Start your gambling adventures",
+		},
+		handler: entereconomyHandler,
+	},
+	"stonks": {
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "stonks",
+			Description: "Buy or sell stocks",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:         discordgo.ApplicationCommandOptionString,
+					Name:         "company",
+					Description:  "The company you want to buy/sell stocks from",
+					Required:     true,
+					Autocomplete: true,
+				},
+				intOption("amount", "The amount of Scorchcoin you want to invest", true),
+				{
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Name:        "option",
+					Description: "Choose between buying and selling",
+					Required:    true,
+					Choices: []*discordgo.ApplicationCommandOptionChoice{
+						{
+							Name:  "buy",
+							Value: 1,
+						},
+						{
+							Name:  "sell",
+							Value: 0,
+						},
+					},
+				},
+			},
+		},
+		handler: stonksHandler,
+	},
+
+	/*
+
 		Miscellaneous
 
 	*/
@@ -460,6 +536,7 @@ var componentAndModalCommands = map[string]func(s *discordgo.Session, i *discord
 
 var autocompletes = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
 	"message": messageAutocompleteHandler,
+	"stonks":  stonksAutocompleteHandler,
 }
 
 func intOption(name string, desc string, required bool) *discordgo.ApplicationCommandOption {

@@ -1,7 +1,7 @@
 package sender
 
 import (
-	"log"
+	"log/slog"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -60,7 +60,7 @@ func splitIntoChunks(message string, chunkSize int) []string {
 
 func HandleErr(s *discordgo.Session, channelID string, err error) bool {
 	if err != nil {
-		log.Printf("Received error: %s", err.Error())
+		slog.Error(err.Error())
 		s.ChannelMessageSend(channelID, "Error:\n```"+err.Error()+"```")
 		return true
 	}

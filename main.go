@@ -11,6 +11,7 @@ import (
 	"BetterScorch/sender"
 	"BetterScorch/webhooks"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -21,6 +22,15 @@ import (
 var running = false
 
 func main() {
+	opts := PrettyHandlerOptions{
+		SlogOpts: slog.HandlerOptions{
+			Level: slog.LevelDebug,
+		},
+	}
+	handler := NewPrettyHandler(os.Stdout, opts)
+	logger := slog.New(handler)
+	slog.SetDefault(logger)
+
 	fmt.Println("Commencing startup sequence")
 
 	fmt.Print("|   Initialising AI package... ")
@@ -36,6 +46,7 @@ func main() {
 	session, _ := discordgo.New("Bot " + secrets.BotToken)
 	session.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAll)
 
+	session.AddHandler(threadCreateHandler)
 	session.AddHandler(readyHandler)
 	err = session.Open()
 	if err != nil {
@@ -54,10 +65,9 @@ func main() {
 		syscall.SIGTERM,
 		syscall.SIGQUIT) // Systemd service stop
 
-	// Run in a goroutine so it doesn't block the main program
 	go func() {
 		sig := <-sigChan
-		fmt.Printf("\nReceived signal: %v\n", sig)
+		slog.Info("Received signal", "signal", sig)
 
 		// Perform any cleanup here if needed
 		fmt.Print("|   Reviving all executed members... ")
@@ -84,6 +94,7 @@ func main() {
 
 func readyHandler(s *discordgo.Session, r *discordgo.Ready) {
 	if !running {
+		s.GuildMemberRoleAdd("1195135473006420048", "384422339393355786", "1195858179590987866")
 		fmt.Println("|   Initialising webhooks")
 		fmt.Print("    |   Loading Scorch webhook... ")
 		sender.InitWebhook(s)
@@ -108,5 +119,12 @@ func readyHandler(s *discordgo.Session, r *discordgo.Ready) {
 		fmt.Println("Start successful, beginning log")
 		fmt.Println("---------------------------------------------------")
 		running = true
+	}
+}
+
+func threadCreateHandler(s *discordgo.Session, tc *discordgo.ThreadCreate) {
+	if execution.IsDead(tc.OwnerID) {
+		slog.Info("Deleted thread from executed user")
+		s.ChannelDelete(tc.ID)
 	}
 }

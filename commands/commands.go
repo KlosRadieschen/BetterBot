@@ -5,7 +5,7 @@ import (
 	"BetterScorch/secrets"
 	"BetterScorch/sender"
 	"fmt"
-	"log"
+	"log/slog"
 	"runtime/debug"
 	"slices"
 	"strings"
@@ -26,40 +26,62 @@ func AddAllCommands(s *discordgo.Session) {
 		commandSlice = append(commandSlice, command.declaration)
 	}
 	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		defer func() {
-			if r := recover(); r != nil {
-				sender.Followup(s, i, fmt.Sprintf("PANIC: %v", r))
-				sender.Respond(s, i, fmt.Sprintf("PANIC: %v", r), nil)
-				fmt.Println(string(debug.Stack()))
-			}
-		}()
-
 		if i.Type == discordgo.InteractionApplicationCommand {
+			defer func() {
+				if r := recover(); r != nil {
+					sender.Followup(s, i, fmt.Sprintf("PANIC: %v", r))
+					sender.Respond(s, i, fmt.Sprintf("PANIC: %v", r), nil)
+					slog.Error(fmt.Sprintf("%v", r), "commandName", i.ApplicationCommandData().Name, "commandType", "ApplicationCommand")
+					fmt.Println(string(debug.Stack()))
+				}
+			}()
+
 			if execution.IsDead(i.Member.User.ID) && !isHC(i.Member) {
 				sender.RespondEphemeral(s, i, "https://tenor.com/view/yellow-emoji-no-no-emotiguy-no-no-no-gif-gif-9742000569423889376", nil)
 			} else {
-				log.Println("Received Command: " + i.ApplicationCommandData().Name)
+				slog.Info("Received Command", "name", i.ApplicationCommandData().Name, "commandType", "ApplicationCommand", "args", i.ApplicationCommandData().Options)
 				if h, ok := commands[i.ApplicationCommandData().Name]; ok {
 					h.handler(s, i)
 				}
 			}
 		}
 	})
-	s.ApplicationCommandBulkOverwrite(s.State.Application.ID, secrets.GuildID, commandSlice)
+	_, err := s.ApplicationCommandBulkOverwrite(s.State.Application.ID, secrets.GuildID, commandSlice)
+	if err != nil {
+		slog.Error(err.Error())
+	}
 	fmt.Println("Done")
 
 	fmt.Print("    |   Adding component commands... ")
 	for commandName, commandFunction := range componentAndModalCommands {
 		s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			if i.Type == discordgo.InteractionMessageComponent && strings.HasPrefix(strings.ToLower(i.MessageComponentData().CustomID), strings.ToLower(commandName)) {
-				log.Println("Received Command: " + i.MessageComponentData().CustomID)
+				defer func() {
+					if r := recover(); r != nil {
+						sender.Followup(s, i, fmt.Sprintf("PANIC: %v", r))
+						sender.Respond(s, i, fmt.Sprintf("PANIC: %v", r), nil)
+						slog.Error(fmt.Sprintf("%v", r), "commandName", i.MessageComponentData().CustomID, "commandType", "Component")
+						fmt.Println(string(debug.Stack()))
+					}
+				}()
+
+				slog.Info("Received Command", "name", i.MessageComponentData().CustomID, "commandType", "Component")
 				if execution.IsDead(i.Member.User.ID) && !isHC(i.Member) {
 					sender.RespondEphemeral(s, i, "https://tenor.com/view/yellow-emoji-no-no-emotiguy-no-no-no-gif-gif-9742000569423889376", nil)
 				} else {
 					commandFunction(s, i)
 				}
 			} else if i.Type == discordgo.InteractionModalSubmit && strings.HasPrefix(strings.ToLower(i.ModalSubmitData().CustomID), strings.ToLower(commandName)) {
-				log.Println("Received Command: " + i.ModalSubmitData().CustomID)
+				defer func() {
+					if r := recover(); r != nil {
+						sender.Followup(s, i, fmt.Sprintf("PANIC: %v", r))
+						sender.Respond(s, i, fmt.Sprintf("PANIC: %v", r), nil)
+						slog.Error(fmt.Sprintf("%v", r), "commandName", i.ModalSubmitData().CustomID, "commandType", "Modal")
+						fmt.Println(string(debug.Stack()))
+					}
+				}()
+
+				slog.Info("Received Command: ", "name", i.ModalSubmitData().CustomID, "commandType", "Modal")
 				if execution.IsDead(i.Member.User.ID) && !isHC(i.Member) {
 					sender.RespondEphemeral(s, i, "https://tenor.com/view/yellow-emoji-no-no-emotiguy-no-no-no-gif-gif-9742000569423889376", nil)
 				} else {
@@ -74,7 +96,16 @@ func AddAllCommands(s *discordgo.Session) {
 	for commandName, commandFunction := range autocompletes {
 		s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			if i.Type == discordgo.InteractionApplicationCommandAutocomplete && strings.HasPrefix(strings.ToLower(i.ApplicationCommandData().Name), strings.ToLower(commandName)) {
-				log.Println("Received Autocomplete: " + i.ApplicationCommandData().Name)
+				defer func() {
+					if r := recover(); r != nil {
+						sender.Followup(s, i, fmt.Sprintf("PANIC: %v", r))
+						sender.Respond(s, i, fmt.Sprintf("PANIC: %v", r), nil)
+						slog.Error(fmt.Sprintf("%v", r), "commandName", i.ApplicationCommandData().Name, "commandType", "Autocomplete")
+						fmt.Println(string(debug.Stack()))
+					}
+				}()
+
+				slog.Info("Received Command: ", "name", i.ApplicationCommandData().Name, "commandType", "Autocomplete")
 				commandFunction(s, i)
 			}
 		})

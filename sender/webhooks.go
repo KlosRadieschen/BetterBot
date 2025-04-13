@@ -19,9 +19,7 @@ func InitWebhook(s *discordgo.Session) {
 }
 
 func SendCharacterMessage(s *discordgo.Session, m *discordgo.MessageCreate, cleanedMessage string, name string, avatar string) {
-	if webhook.ChannelID != m.ChannelID {
-		s.WebhookEdit(webhook.ID, webhook.Name, webhook.Avatar, m.ChannelID)
-	}
+	s.WebhookEdit(webhook.ID, webhook.Name, webhook.Avatar, m.ChannelID)
 
 	_, err := s.WebhookExecute(webhook.ID, webhook.Token, false, &discordgo.WebhookParams{
 		Content:     cleanedMessage,

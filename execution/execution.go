@@ -3,8 +3,10 @@ package execution
 import (
 	"BetterScorch/secrets"
 	"BetterScorch/sender"
+	"BetterScorch/stocks"
 	"container/list"
 	"fmt"
+	"log/slog"
 	"math/rand"
 	"slices"
 	"strings"
@@ -31,6 +33,7 @@ func Execute(s *discordgo.Session, userID string, channelID string, sacrificed b
 			executees[index].count++
 			executees[index].sacrificed = false
 
+			stocks.ModifyCompanyValue("Execution Solutions LLC", 500)
 			sender.SendMessage(s, channelID, fmt.Sprintf("Increasing %v's execution count to %v!", Member(s, userID).Mention(), executee.count+1))
 			return
 		}
@@ -52,6 +55,7 @@ func Execute(s *discordgo.Session, userID string, channelID string, sacrificed b
 		sacrificed: sacrificed,
 		startTime:  time.Now(),
 	})
+	stocks.ModifyCompanyValue("Execution Solutions LLC", 500)
 	sender.SendMessage(s, channelID, fmt.Sprintf("%v is fucking dead", Member(s, userID).Mention()))
 }
 
@@ -60,7 +64,36 @@ func GambleExecute(s *discordgo.Session, i *discordgo.InteractionCreate, attacke
 	victimMember, _ := s.GuildMember(i.GuildID, victimID)
 
 	var msg *discordgo.Message
-	if !IsAdminAbuser(victimMember) {
+	if victimID == "942159289836011591" {
+		msg, _ = s.ChannelMessageSendComplex(i.ChannelID, &discordgo.MessageSend{
+			Embeds: []*discordgo.MessageEmbed{
+				{
+					Color: 0xFF69B4,
+					Title: strings.ToUpper(attackerMember.Nick) + " FUCKING DIES",
+				},
+				{
+					Color: 0xFF69B4,
+					Title: strings.ToUpper(victimMember.Nick) + " FUCKING DIES",
+				},
+				{
+					Color: 0xFF69B4,
+					Title: strings.ToUpper(victimMember.Nick) + " FUCKING DIES",
+				},
+				{
+					Color: 0xFF69B4,
+					Title: strings.ToUpper(victimMember.Nick) + " FUCKING DIES",
+				},
+				{
+					Color: 0xFF69B4,
+					Title: "BOTH FUCKING DIE",
+				},
+				{
+					Color: 0xFF69B4,
+					Title: "NOBODY FUCKING DIES",
+				},
+			},
+		})
+	} else if !IsAdminAbuser(victimMember) {
 		msg, _ = s.ChannelMessageSendComplex(i.ChannelID, &discordgo.MessageSend{
 			Embeds: []*discordgo.MessageEmbed{
 				{
@@ -147,6 +180,8 @@ func GambleExecute(s *discordgo.Session, i *discordgo.InteractionCreate, attacke
 	case "BOTH":
 		Execute(s, attackerID, msg.ChannelID, false)
 		Execute(s, victimID, msg.ChannelID, false)
+	case "NOBODY":
+		stocks.ModifyCompanyValue("Execution Solutions LLC", -1000)
 	}
 }
 
@@ -164,18 +199,19 @@ func Revive(s *discordgo.Session, userID string, channelID string) {
 		}
 	}
 
+	stocks.ModifyCompanyValue("Revival Technologies", 500)
 	sender.SendMessage(s, channelID, fmt.Sprintf("%v has been revived!", member.Mention()))
 }
 
 func GambleRevive(s *discordgo.Session, i *discordgo.InteractionCreate, sacrificerID string, victimID string) {
-	attackerMember, _ := s.GuildMember(i.GuildID, sacrificerID)
+	sacrificerMember, _ := s.GuildMember(i.GuildID, sacrificerID)
 	victimMember, _ := s.GuildMember(i.GuildID, victimID)
 
 	msg, _ := s.ChannelMessageSendComplex(i.ChannelID, &discordgo.MessageSend{
 		Embeds: []*discordgo.MessageEmbed{
 			{
 				Color: 0xFF69B4,
-				Title: strings.ToUpper(attackerMember.Nick) + " FUCKING DIES",
+				Title: strings.ToUpper(sacrificerMember.Nick) + " FUCKING DIES",
 			},
 			{
 				Color: 0xFF69B4,
@@ -228,13 +264,15 @@ func GambleRevive(s *discordgo.Session, i *discordgo.InteractionCreate, sacrific
 	})
 
 	switch strings.Split(msg.Embeds[0].Title, " FUCKING")[0] {
-	case strings.ToUpper(attackerMember.Nick):
+	case strings.ToUpper(sacrificerMember.Nick):
 		Execute(s, sacrificerID, msg.ChannelID, false)
 	case strings.ToUpper(victimMember.Nick):
 		Revive(s, victimID, msg.ChannelID)
 	case "SOUL":
 		Execute(s, sacrificerID, msg.ChannelID, false)
 		Revive(s, victimID, msg.ChannelID)
+	case "NOTHING":
+		stocks.ModifyCompanyValue("Revival Technologies", -1000)
 	}
 }
 
@@ -276,9 +314,11 @@ func getExecutee(userID string) *executee {
 func CheckAndDeleteExecuteeMessage(s *discordgo.Session, m *discordgo.MessageCreate) bool {
 	if IsDead(m.Author.ID) {
 		if time.Since(getExecutee(m.Author.ID).startTime) > 30*time.Minute {
+			slog.Info("Automatic revive triggered", "userID", m.Author.ID)
 			sender.SendMessage(s, "1196943729387372634", "Automatically reviving "+Member(s, m.Author.ID).Mention())
 			Revive(s, m.Author.ID, "1196943729387372634")
 		} else {
+			slog.Info("Deleted message from executed user", "userID", m.Author.ID, "message", m.Content)
 			s.ChannelMessageDelete(m.ChannelID, m.ID)
 			return true
 		}
@@ -288,8 +328,8 @@ func CheckAndDeleteExecuteeMessage(s *discordgo.Session, m *discordgo.MessageCre
 
 func CheckAndDeleteExecuteeTupperMessage(s *discordgo.Session, m *discordgo.MessageCreate, msgs map[string]*list.List) {
 	for _, executee := range executees {
-		if msgs[executee.id] != nil && strings.Contains(msgs[executee.id].Back().Value.(*discordgo.Message).Content, m.Content) {
-			println(msgs[executee.id].Back().Value.(*discordgo.Message).Content)
+		if msgs[executee.id] != nil && strings.Contains(msgs[executee.id].Back().Value.(*discordgo.Message).Content, m.Content) && m.Content != "" {
+			slog.Info("Deleted tupper message from executed user", "userID", executee.id, "message", m.Content)
 			s.ChannelMessageDelete(m.ChannelID, m.ID)
 			return
 		}

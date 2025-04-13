@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -47,7 +48,7 @@ func Insert(table string, values ...*DBValue) error {
 		strings.TrimSuffix(strings.Repeat("?,", len(values)), ","),
 	)
 
-	log.Println(fmt.Sprintf("Executing query: %v", query))
+	slog.Info("Database interaction", "query", query)
 
 	stmt, err := db.Prepare(query)
 	if err != nil {
@@ -63,48 +64,63 @@ func Insert(table string, values ...*DBValue) error {
 	return nil
 }
 
-func Get(table string, fields []string, where DBValue) ([][]string, error) {
-	err := db.Ping()
-	if err != nil {
+func Get(table string, fields []string, whereValues ...*DBValue) ([][]string, error) {
+	if len(whereValues) == 0 {
+		return nil, fmt.Errorf("at least one where value must be provided")
+	}
+
+	if err := db.Ping(); err != nil {
 		return nil, err
 	}
 
-	// change in future
-	query := fmt.Sprintf("SELECT %s FROM `%s` WHERE %v=%v",
+	// Build WHERE clause and args
+	whereClauses := make([]string, len(whereValues))
+	args := make([]any, len(whereValues))
+
+	for i, wv := range whereValues {
+		whereClauses[i] = fmt.Sprintf("%s = ?", wv.Name)
+		args[i] = wv.Value
+	}
+
+	query := fmt.Sprintf(
+		"SELECT %s FROM `%s` WHERE %s",
 		strings.Join(fields, ", "),
 		table,
-		where.Name,
-		where.Value,
+		strings.Join(whereClauses, " AND "), // 🧠 spacing fixed, no more SQL-pocalypse
 	)
 
-	log.Println(fmt.Sprintf("Executing query: %v", query))
+	slog.Info("Database interaction", "query", query, "args", args)
 
-	rows, err := db.Query(query)
+	rows, err := db.Query(query, args...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to execute query: %w", err)
 	}
 	defer rows.Close()
 
 	var results [][]string
 
 	for rows.Next() {
-		columns, _ := rows.Columns()
-		row := make([]string, len(columns))
-		rowPtrs := make([]any, len(columns))
+		cols, err := rows.Columns()
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch columns: %w", err)
+		}
 
+		// Prepare string slices for scan
+		row := make([]string, len(cols))
+		rowPtrs := make([]any, len(cols))
 		for i := range row {
 			rowPtrs[i] = &row[i]
 		}
 
 		if err := rows.Scan(rowPtrs...); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 
 		results = append(results, row)
 	}
 
-	if err = rows.Err(); err != nil {
-		return nil, err
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("row iteration error: %w", err)
 	}
 
 	return results, nil
@@ -117,7 +133,7 @@ func GetAll(table string) ([][]string, error) {
 	}
 
 	query := fmt.Sprintf("SELECT * FROM `%s`", table)
-	// log.Println(fmt.Sprintf("Executing query: %v", query))
+	// slog.Info("Database interaction", "query", query)
 
 	rows, err := db.Query(query)
 	if err != nil {
@@ -150,32 +166,48 @@ func GetAll(table string) ([][]string, error) {
 	return results, nil
 }
 
-func Update(table string, keyValue *DBValue, values ...*DBValue) error {
-	err := db.Ping()
-	if err != nil {
+func Update(table string, keyValues []*DBValue, values ...*DBValue) error {
+	if len(keyValues) == 0 {
+		return fmt.Errorf("at least one key value must be provided")
+	}
+
+	if err := db.Ping(); err != nil {
 		return err
 	}
 
-	setClause := strings.Join(getUpdateSetClause(values), ", ")
+	setClauses := make([]string, len(values))
+	for i, v := range values {
+		setClauses[i] = fmt.Sprintf("%s = ?", v.Name)
+	}
+	setClause := strings.Join(setClauses, ", ")
+
+	whereClauses := make([]string, len(keyValues))
+	for i, kv := range keyValues {
+		whereClauses[i] = fmt.Sprintf("%s = ?", kv.Name)
+	}
+	whereClause := strings.Join(whereClauses, " AND ")
+
 	query := fmt.Sprintf(
-		"UPDATE %s SET %s WHERE %s=?",
+		"UPDATE %s SET %s WHERE %s",
 		table,
 		setClause,
-		keyValue.Name,
+		whereClause,
 	)
 
-	log.Println(fmt.Sprintf("Executing query: %v", query))
-
-	stmt, err := db.Prepare(query)
-	if err != nil {
-		return err
+	// Proper order: SET values first, then WHERE key values
+	args := make([]any, 0, len(values)+len(keyValues))
+	for _, v := range values {
+		args = append(args, v.Value)
 	}
-	defer stmt.Close()
+	for _, kv := range keyValues {
+		args = append(args, kv.Value)
+	}
 
-	args := append(getDBValues(values), keyValue.Value)
-	_, err = stmt.Exec(args)
+	slog.Info("Database interaction", "query", query)
+
+	_, err := db.Exec(query, args...)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to execute update: %w", err)
 	}
 
 	return nil
@@ -197,7 +229,7 @@ func Remove(table string, conditions ...*DBValue) (int, error) {
 	whereClause := strings.Join(whereConditions, " AND ")
 
 	query := fmt.Sprintf("DELETE FROM `%s` WHERE %s", table, whereClause)
-	log.Println(fmt.Sprintf("Executing query: %s", query))
+	slog.Info("Database interaction", "query", query)
 
 	stmt, err := db.Prepare(query)
 	if err != nil {
@@ -216,6 +248,51 @@ func Remove(table string, conditions ...*DBValue) (int, error) {
 	}
 
 	return int(affected), nil
+}
+
+func InsertOrUpdate(table string, keys []*DBValue, value *DBValue) error {
+	allColumns := append(keys, value)
+
+	columnNames := make([]string, len(allColumns))
+	placeholders := make([]string, len(allColumns))
+	args := make([]any, len(allColumns))
+
+	for i, col := range allColumns {
+		columnNames[i] = col.Name
+		placeholders[i] = "?"
+		args[i] = col.Value
+	}
+
+	query := fmt.Sprintf(`
+		INSERT INTO %s (%s) VALUES (%s)
+		ON DUPLICATE KEY UPDATE %s=?`,
+		table,
+		strings.Join(columnNames, ", "),
+		strings.Join(placeholders, ", "),
+		value.Name,
+	)
+
+	args = append(args, value.Value)
+
+	slog.Info("Database interaction", "query", query, "args", args)
+	_, err := db.Exec(query, args...)
+	return err
+}
+
+func joinNames(values []*DBValue) string {
+	names := make([]string, len(values))
+	for i, v := range values {
+		names[i] = v.Name
+	}
+	return strings.Join(names, ", ")
+}
+
+func joinPlaceholders(n int) string {
+	p := make([]string, n)
+	for i := 0; i < n; i++ {
+		p[i] = "?"
+	}
+	return strings.Join(p, ", ")
 }
 
 func getDBValues(dbVals []*DBValue) []string {

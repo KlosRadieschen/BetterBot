@@ -6,13 +6,16 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"BetterScorch/database"
 	"BetterScorch/secrets"
 	"BetterScorch/sender"
+	"BetterScorch/stocks"
 	"BetterScorch/webhooks"
 
 	"github.com/bwmarrin/discordgo"
@@ -142,6 +145,79 @@ func unregisterHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 /*
 
+Gambling
+
+*/
+
+func entereconomyHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	err := stocks.Enter(i.Member.User.ID)
+
+	if err != nil {
+		sender.RespondError(s, i, "The user is trying to enter the ScorchCoin economy but is already in it")
+	} else {
+		sender.Respond(s, i, "Successfully entered the ScorchCoin economy with 420 ScorchCoin", nil)
+	}
+}
+
+func balanceHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	balance, err := stocks.ModifyBalance(i.Member.User.ID, 0)
+	if !sender.HandleErrInteraction(s, i, err) {
+		sender.Respond(s, i, fmt.Sprintf("You currently own %v ScorchCoin", balance), nil)
+	}
+}
+
+func stonksHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	// You cant use options with boolean values so we parse an int instead
+	bool := false
+	if i.ApplicationCommandData().Options[2].IntValue() == 1 {
+		bool = true
+	}
+
+	if bool {
+		_, err := stocks.ModifyBalance(i.Member.User.ID, -int(i.ApplicationCommandData().Options[1].IntValue()))
+		if err != nil {
+			sender.RespondError(s, i, err.Error())
+		}
+	} else {
+		_, err := stocks.ModifyBalance(i.Member.User.ID, int(i.ApplicationCommandData().Options[1].IntValue()))
+		if err != nil {
+			sender.RespondError(s, i, err.Error())
+		}
+	}
+
+	newVal, err := stocks.Trade(i.Member.User.ID, i.ApplicationCommandData().Options[0].StringValue(), int(i.ApplicationCommandData().Options[1].IntValue()), bool)
+	if err != nil {
+		sender.RespondError(s, i, err.Error())
+	}
+
+	sender.Respond(s, i, fmt.Sprintf("You now own %v of Scorchcoin in %v", newVal, i.ApplicationCommandData().Options[0].StringValue()), nil)
+}
+
+func gambleHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	switch i.ApplicationCommandData().Options[1].IntValue() {
+	case 0:
+		coinflipHandler(s, i)
+	}
+}
+
+func coinflipHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	sender.Respond(s, i, "https://tenor.com/view/eminem-eminem-taern-eminem-taern-coin-toss-eminem-imperial-imperial-gif-13493891068666315081", nil)
+	time.Sleep(3 * time.Second)
+	if rand.Intn(2) == 0 {
+		newVal, err := stocks.ModifyBalance(i.Member.User.ID, -int(i.ApplicationCommandData().Options[0].IntValue()))
+		if !sender.HandleErrInteractionFollowup(s, i, err) {
+			sender.Followup(s, i, fmt.Sprintf("YOU LOSE %v SCORCHCOIN (New Balance: %v)", i.ApplicationCommandData().Options[0].IntValue(), newVal))
+		}
+	} else {
+		newVal, err := stocks.ModifyBalance(i.Member.User.ID, int(i.ApplicationCommandData().Options[0].IntValue()))
+		if !sender.HandleErrInteractionFollowup(s, i, err) {
+			sender.Followup(s, i, fmt.Sprintf("YOU WIN %v SCORCHCOIN (New Balance: %v)", i.ApplicationCommandData().Options[0].IntValue(), newVal))
+		}
+	}
+}
+
+/*
+
 REPORTS
 
 */
@@ -183,7 +259,7 @@ func getReportHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	fmt.Println(timeIndex)
 
-	reports, err := database.Get("Report", []string{"pk_name", "fk_pilot_wrote", "description"}, database.DBValue{Name: "timeIndex", Value: strconv.Itoa(timeInt)})
+	reports, err := database.Get("Report", []string{"pk_name", "fk_pilot_wrote", "description"}, &database.DBValue{Name: "timeIndex", Value: strconv.Itoa(timeInt)})
 
 	if !sender.HandleErrInteraction(s, i, err) {
 		if len(reports) == 0 {

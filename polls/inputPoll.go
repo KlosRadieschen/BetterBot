@@ -4,6 +4,7 @@ import (
 	"BetterScorch/secrets"
 	"context"
 	"fmt"
+	"log/slog"
 	"math"
 	"strings"
 	"time"
@@ -81,8 +82,10 @@ func WaitAndEvaluateInput(s *discordgo.Session, pollID string, ctx context.Conte
 	thread, _ := s.MessageThreadStart(pollChannelID, pollID, "Discussion", 60)
 
 	<-ctx.Done()
-	endTime, _ := ctx.Deadline()
 
+	slog.Info("Poll ended", "pollType", "Input-poll", "ID", pollID)
+
+	endTime, _ := ctx.Deadline()
 	poll, _ := s.ChannelMessage(pollChannelID, pollID)
 
 	var newContent string

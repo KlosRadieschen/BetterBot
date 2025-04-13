@@ -30,7 +30,7 @@ func executeHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 
 	if (!execution.IsSacrificed(i.Member.User.ID) && !isHC(i.Member)) || (len(i.ApplicationCommandData().Options) > 1 && i.ApplicationCommandData().Options[1].BoolValue()) {
-		sender.Respond(s, i, "# GAMBLING ACTIVATED", nil)
+		sender.Respond(s, i, "# [GAMBLING](https://tenor.com/view/jujutsu-kaisen-domain-expansion-hakari-shut-up-gif-15016558957696610141) ACTIVATED", nil)
 		execution.GambleExecute(s, i, i.Member.User.ID, target)
 	} else {
 		sender.Respond(s, i, "Engaging target", nil)
@@ -49,7 +49,7 @@ func reviveHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if !execution.IsDead(target) {
 		sender.RespondError(s, i, "The user is trying to revive an \"executed\" member, but the target is not even executed")
 	} else if (!execution.IsSacrificed(target) && !isHC(i.Member)) || (len(i.ApplicationCommandData().Options) > 1 && i.ApplicationCommandData().Options[1].BoolValue()) {
-		sender.Respond(s, i, "# GAMBLING ACTIVATED", nil)
+		sender.Respond(s, i, "# [GAMBLING](https://tenor.com/view/jujutsu-kaisen-domain-expansion-hakari-shut-up-gif-15016558957696610141) ACTIVATED", nil)
 		execution.GambleRevive(s, i, i.Member.User.ID, target)
 	} else {
 		sender.Respond(s, i, "Commencing revive sequence", nil)
