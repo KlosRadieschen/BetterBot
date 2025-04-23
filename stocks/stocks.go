@@ -3,51 +3,20 @@ package stocks
 import (
 	"BetterScorch/database"
 	"fmt"
+	"log/slog"
+	"math/rand"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
+
+	"gonum.org/v1/plot"
+	"gonum.org/v1/plot/plotter"
+	"gonum.org/v1/plot/plotutil"
+	"gonum.org/v1/plot/vg"
 )
 
-func Trade(user, company string, amount int, buying bool) (int, error) {
-	if !buying {
-		amount = -amount
-	}
-
-	keys := []*database.DBValue{
-		{Name: "pkfk_user_owns", Value: user},
-		{Name: "pkfk_company_belongsTo", Value: company},
-	}
-
-	current, err := database.Get("Shareholder", []string{"amount"}, keys...)
-	if err != nil {
-		return -1, err
-	}
-
-	intCurrent := 0
-	if len(current) > 0 && len(current[0]) > 0 {
-		intCurrent, _ = strconv.Atoi(current[0][0])
-	}
-
-	newValue := intCurrent + amount
-	if newValue < 0 {
-		return -1, fmt.Errorf("cannot hold negative shares")
-	}
-
-	err = database.InsertOrUpdate("Shareholder", keys, &database.DBValue{
-		Name:  "amount",
-		Value: strconv.Itoa(newValue),
-	})
-	if err != nil {
-		if strings.HasPrefix(err.Error(), "Error 1452") && strings.Contains(err.Error(), "fk_user_owns") {
-			return -1, fmt.Errorf("You are not registered in the economy. Please use /entereconomy first")
-		} else if strings.HasPrefix(err.Error(), "Error 1452") && strings.Contains(err.Error(), "fk_company_belongsTo") {
-			return -1, fmt.Errorf("Please enter a valid company name")
-		} else {
-			return -1, err
-		}
-	}
-
-	return newValue, ModifyCompanyValue(company, amount)
-}
+var Mutex sync.Mutex
 
 func ModifyCompanyValue(name string, delta int) error {
 	// Fetch the company's current value
@@ -78,32 +47,19 @@ func ModifyCompanyValue(name string, delta int) error {
 		return err
 	}
 
-	// Calculate the total of all current shareholder amounts
-	var totalAmount int
-	for _, shareholder := range shareholders {
-		amt, err := strconv.Atoi(shareholder[1]) // assuming amount is the second field
-		if err != nil {
-			panic(err)
-		}
-		totalAmount += amt
-	}
-
-	// If the total amount is zero, no need to do scaling
-	if totalAmount == 0 {
-		return fmt.Errorf("cannot scale amounts when total shareholder amount is zero")
-	}
-
 	// Calculate the scaling factor (new value / old total)
 	scalingFactor := float64(newValue) / float64(intCurrent)
 	fmt.Println(scalingFactor)
 
 	// Update each shareholder's amount based on the scaling factor
+	total := 0
 	for _, shareholder := range shareholders {
 		user := shareholder[0] // user ID is the first column
 		amt, _ := strconv.Atoi(shareholder[1])
 
 		// Calculate new amount for this shareholder
 		newAmount := int(float64(amt) * scalingFactor)
+		total += newAmount
 
 		// Update the shareholder's amount in the database
 		err := database.Update("Shareholder",
@@ -115,11 +71,75 @@ func ModifyCompanyValue(name string, delta int) error {
 		}
 	}
 
-	// Now update the company value
-	return database.Update("Company",
+	err = database.Update("Company",
 		[]*database.DBValue{{Name: "pk_name", Value: name}},
+		&database.DBValue{Name: "value", Value: strconv.Itoa(total)},
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func BuyShares(user string, company string, delta int) (int, error) {
+	// Fetch the company's current value
+	current, err := database.Get("Company", []string{"value"}, &database.DBValue{
+		Name:  "pk_name",
+		Value: company,
+	})
+	if err != nil {
+		return -1, err
+	}
+
+	intCurrent, _ := strconv.Atoi(current[0][0])
+
+	// Update the company's value
+	newValue := intCurrent + delta
+
+	// If the new value is negative, throw an error
+	if newValue < 0 {
+		return -1, fmt.Errorf("company value cannot be negative")
+	}
+
+	err = database.Update("Company",
+		[]*database.DBValue{{Name: "pk_name", Value: company}},
 		&database.DBValue{Name: "value", Value: strconv.Itoa(newValue)},
 	)
+	if err != nil {
+		return -1, err
+	}
+
+	_, err = ModifyBalance(user, -delta)
+	if err != nil {
+		return -1, err
+	}
+
+	currentShares, err := database.Get("Shareholder", []string{"amount"}, []*database.DBValue{{Name: "pkfk_company_belongsTo", Value: company}, {Name: "pkfk_user_owns", Value: user}}...)
+	if err != nil {
+		return -1, err
+	}
+
+	var currentSharesInt int
+	if len(currentShares) == 0 {
+		currentSharesInt = 0
+	} else {
+		currentSharesInt, _ = strconv.Atoi(currentShares[0][0])
+	}
+
+	if currentSharesInt < -delta && delta < 0 {
+		return -1, fmt.Errorf("You can't sell more stocks than you have")
+	}
+
+	err = database.InsertOrUpdate("Shareholder",
+		[]*database.DBValue{{Name: "pkfk_company_belongsTo", Value: company}, {Name: "pkfk_user_owns", Value: user}},
+		&database.DBValue{Name: "amount", Value: strconv.Itoa(currentSharesInt + delta)},
+	)
+	if err != nil {
+		return -1, err
+	}
+
+	return currentSharesInt + delta, nil
 }
 
 func ModifyBalance(user string, amount int) (int, error) {
@@ -131,17 +151,129 @@ func ModifyBalance(user string, amount int) (int, error) {
 		return -1, err
 	}
 
-	intVal, err := strconv.Atoi(currentVal[0][0])
-	if amount > intVal {
-		return -1, fmt.Errorf("amount higher than current balance")
-	} else if err != nil {
+	if len(currentVal) == 0 {
 		return -1, fmt.Errorf("You are not registered in the economy. Please use /entereconomy first")
 	}
 
-	return amount + intVal, database.Update("ScorchCoin", []*database.DBValue{{Name: "pk_user", Value: user}}, &database.DBValue{Name: "balance", Value: strconv.Itoa(amount + intVal)})
+	intVal, err := strconv.Atoi(currentVal[0][0])
 
+	return amount + intVal, database.Update("ScorchCoin", []*database.DBValue{{Name: "pk_user", Value: user}}, &database.DBValue{Name: "balance", Value: strconv.Itoa(amount + intVal)})
+}
+
+func GetBalance(user string) (int, error) {
+	currentVal, err := database.Get("ScorchCoin", []string{"balance"}, &database.DBValue{Name: "pk_user", Value: user})
+	if err != nil {
+		if strings.Contains(err.Error(), "index out of range") {
+			return -1, fmt.Errorf("You are not registered in the economy. Please use /entereconomy first")
+		}
+		return -1, err
+	}
+
+	if len(currentVal) == 0 {
+		return -1, fmt.Errorf("You are not registered in the economy. Please use /entereconomy first")
+	}
+
+	return strconv.Atoi(currentVal[0][0])
+
+}
+
+func GetPortfolio(user string) (map[string]int, error) {
+	rows, err := database.Get("Shareholder", []string{"pkfk_company_belongsTo", "amount"}, &database.DBValue{
+		Name:  "pkfk_user_owns",
+		Value: user,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]int)
+	for _, row := range rows {
+		company := row[0]
+		amt, _ := strconv.Atoi(row[1])
+		result[company] = amt
+	}
+
+	return result, nil
+}
+
+func GetCompanyValue(companyName string) (int, error) {
+	result, err := database.Get("Company", []string{"value"}, &database.DBValue{
+		Name:  "pk_name",
+		Value: companyName,
+	})
+	if err != nil {
+		return 0, err
+	}
+	if len(result) == 0 || len(result[0]) == 0 {
+		return 0, fmt.Errorf("company not found")
+	}
+
+	companyValue, _ := strconv.Atoi(result[0][0])
+
+	return companyValue, nil
 }
 
 func Enter(user string) error {
 	return database.Insert("ScorchCoin", &database.DBValue{Name: "pk_user", Value: user}, &database.DBValue{Name: "balance", Value: "420"})
+}
+
+func RegularHandler() {
+	value, _ := GetCompanyValue("Random Dynamics")
+
+	executionLine := plotter.XYs{}
+	reviveLine := plotter.XYs{}
+	gambleLine := plotter.XYs{}
+	randomLine := plotter.XYs{}
+
+	for true {
+		randInt := rand.Intn(1001) - 500
+		slog.Info("Changing Random Dynamics value", "delta", randInt)
+		ModifyCompanyValue("Random Dynamics", randInt)
+
+		now := float64(time.Now().Unix())
+
+		value, _ = GetCompanyValue("Execution Solutions LLC")
+		executionLine = append(executionLine, plotter.XY{X: now, Y: float64(value)})
+
+		value, _ = GetCompanyValue("Revival Technologies")
+		reviveLine = append(reviveLine, plotter.XY{X: now, Y: float64(value)})
+
+		value, _ = GetCompanyValue("Gambling Inc")
+		gambleLine = append(gambleLine, plotter.XY{X: now, Y: float64(value)})
+
+		value, _ = GetCompanyValue("Random Dynamics")
+		randomLine = append(randomLine, plotter.XY{X: now, Y: float64(value)})
+
+		p := plot.New()
+		p.Title.Text = "Stonks"
+		p.X.Label.Text = "Time"
+		p.Y.Label.Text = "ScorchCoin"
+		p.X.Tick.Marker = plot.TimeTicks{Format: "15:04"}
+
+		plotutil.AddLinePoints(p,
+			"Execution Solutions LLC", executionLine,
+			"Revival Technologies", reviveLine,
+			"Random Dynamics", randomLine,
+		)
+
+		p2 := plot.New()
+		p2.Title.Text = "Gamble stonks"
+		p2.X.Label.Text = "Time"
+		p2.Y.Label.Text = "ScorchCoin"
+		p2.X.Tick.Marker = plot.TimeTicks{Format: "15:04"}
+
+		plotutil.AddLinePoints(p2,
+			"Gambling Inc", gambleLine,
+		)
+
+		if err := p.Save(10*vg.Inch, 4*vg.Inch, "multiline.png"); err != nil {
+			panic(err)
+		}
+
+		if err := p2.Save(10*vg.Inch, 4*vg.Inch, "gamble.png"); err != nil {
+			panic(err)
+		}
+
+		time.Sleep(1 * time.Minute)
+	}
 }

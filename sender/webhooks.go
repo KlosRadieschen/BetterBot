@@ -8,20 +8,20 @@ import (
 	"github.com/sashabaranov/go-openai"
 )
 
-var webhook *discordgo.Webhook
+var Webhook *discordgo.Webhook
 
 func InitWebhook(s *discordgo.Session) {
 	var err error
-	webhook, err = s.Webhook("1339582520110481429")
+	Webhook, err = s.Webhook("1339582520110481429")
 	if err != nil {
 		panic(err)
 	}
 }
 
 func SendCharacterMessage(s *discordgo.Session, m *discordgo.MessageCreate, cleanedMessage string, name string, avatar string) {
-	s.WebhookEdit(webhook.ID, webhook.Name, webhook.Avatar, m.ChannelID)
+	s.WebhookEdit(Webhook.ID, Webhook.Name, Webhook.Avatar, m.ChannelID)
 
-	_, err := s.WebhookExecute(webhook.ID, webhook.Token, false, &discordgo.WebhookParams{
+	_, err := s.WebhookExecute(Webhook.ID, Webhook.Token, false, &discordgo.WebhookParams{
 		Content:     cleanedMessage,
 		Username:    name,
 		AvatarURL:   avatar,
@@ -31,8 +31,8 @@ func SendCharacterMessage(s *discordgo.Session, m *discordgo.MessageCreate, clea
 }
 
 func SendCharacterReply(s *discordgo.Session, m *discordgo.MessageCreate, cleanedMessage string, name string, avatar string) {
-	if webhook.ChannelID != m.ChannelID {
-		s.WebhookEdit(webhook.ID, webhook.Name, webhook.Avatar, m.ChannelID)
+	if Webhook.ChannelID != m.ChannelID {
+		s.WebhookEdit(Webhook.ID, Webhook.Name, Webhook.Avatar, m.ChannelID)
 	}
 
 	var refName string
@@ -44,7 +44,7 @@ func SendCharacterReply(s *discordgo.Session, m *discordgo.MessageCreate, cleane
 		refName = member.Nick
 	}
 
-	_, err = s.WebhookExecute(webhook.ID, webhook.Token, false, &discordgo.WebhookParams{
+	_, err = s.WebhookExecute(Webhook.ID, Webhook.Token, false, &discordgo.WebhookParams{
 		Content: fmt.Sprintf("> [Replying to](https://discord.com/channels/@me/%v/%v): %v\n\n%v",
 			msg.ChannelID,
 			msg.ID,
@@ -59,11 +59,11 @@ func SendCharacterReply(s *discordgo.Session, m *discordgo.MessageCreate, cleane
 }
 
 func SendPersonalityMessage(s *discordgo.Session, channelID string, msg string, name string, pfpLink string, req *openai.ChatCompletionRequest) {
-	if webhook.ChannelID != channelID {
-		s.WebhookEdit(webhook.ID, webhook.Name, webhook.Avatar, channelID)
+	if Webhook.ChannelID != channelID {
+		s.WebhookEdit(Webhook.ID, Webhook.Name, Webhook.Avatar, channelID)
 	}
 
-	_, err := s.WebhookExecute(webhook.ID, webhook.Token, false, &discordgo.WebhookParams{
+	_, err := s.WebhookExecute(Webhook.ID, Webhook.Token, false, &discordgo.WebhookParams{
 		Username:  name,
 		Content:   msg,
 		AvatarURL: pfpLink,
@@ -72,11 +72,11 @@ func SendPersonalityMessage(s *discordgo.Session, channelID string, msg string, 
 }
 
 func SendPersonalityReply(s *discordgo.Session, m *discordgo.MessageCreate, msg string, name string, pfpLink string, embeds []*discordgo.MessageEmbed, req *openai.ChatCompletionRequest) {
-	if webhook.ChannelID != m.ChannelID {
-		s.WebhookEdit(webhook.ID, webhook.Name, webhook.Avatar, m.ChannelID)
+	if Webhook.ChannelID != m.ChannelID {
+		s.WebhookEdit(Webhook.ID, Webhook.Name, Webhook.Avatar, m.ChannelID)
 	}
 
-	_, err := s.WebhookExecute(webhook.ID, webhook.Token, false, &discordgo.WebhookParams{
+	_, err := s.WebhookExecute(Webhook.ID, Webhook.Token, false, &discordgo.WebhookParams{
 		Content: fmt.Sprintf("> [Replying to](https://discord.com/channels/@me/%v/%v): %v\n\n%v",
 			m.ChannelID,
 			m.ID,

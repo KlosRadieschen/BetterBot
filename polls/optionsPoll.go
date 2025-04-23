@@ -52,7 +52,7 @@ func CreateOptionsPoll(s *discordgo.Session, creatorID string, multioption bool,
 		pollTypeString = "Single-option poll"
 	}
 
-	pollMsg, _ := s.ChannelMessageSendComplex(pollChannelID, &discordgo.MessageSend{
+	pollMsg, err := s.ChannelMessageSendComplex(pollChannelID, &discordgo.MessageSend{
 		Content: fmt.Sprintf("# %v\n(%v by %v)\nPoll expires <t:%v:R>",
 			question,
 			pollTypeString,
@@ -73,6 +73,9 @@ func CreateOptionsPoll(s *discordgo.Session, creatorID string, multioption bool,
 			},
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
 
 	optionPolls[pollMsg.ID] = &optionPoll{votes: votes, voters: make(map[string][]int), multioption: multioption, cancel: cancelFunc}
 

@@ -33,7 +33,7 @@ func Execute(s *discordgo.Session, userID string, channelID string, sacrificed b
 			executees[index].count++
 			executees[index].sacrificed = false
 
-			stocks.ModifyCompanyValue("Execution Solutions LLC", 500)
+			stocks.ModifyCompanyValue("Execution Solutions LLC", -500)
 			sender.SendMessage(s, channelID, fmt.Sprintf("Increasing %v's execution count to %v!", Member(s, userID).Mention(), executee.count+1))
 			return
 		}
@@ -55,7 +55,7 @@ func Execute(s *discordgo.Session, userID string, channelID string, sacrificed b
 		sacrificed: sacrificed,
 		startTime:  time.Now(),
 	})
-	stocks.ModifyCompanyValue("Execution Solutions LLC", 500)
+	stocks.ModifyCompanyValue("Execution Solutions LLC", -500)
 	sender.SendMessage(s, channelID, fmt.Sprintf("%v is fucking dead", Member(s, userID).Mention()))
 }
 
@@ -174,14 +174,15 @@ func GambleExecute(s *discordgo.Session, i *discordgo.InteractionCreate, attacke
 
 	switch strings.Split(msg.Embeds[0].Title, " FUCKING")[0] {
 	case strings.ToUpper(attackerMember.Nick):
+		stocks.ModifyCompanyValue("Execution Solutions LLC", 1000)
 		Execute(s, attackerID, msg.ChannelID, false)
 	case strings.ToUpper(victimMember.Nick):
+		stocks.ModifyCompanyValue("Execution Solutions LLC", 1000)
 		Execute(s, victimID, msg.ChannelID, false)
 	case "BOTH":
+		stocks.ModifyCompanyValue("Execution Solutions LLC", 2000)
 		Execute(s, attackerID, msg.ChannelID, false)
 		Execute(s, victimID, msg.ChannelID, false)
-	case "NOBODY":
-		stocks.ModifyCompanyValue("Execution Solutions LLC", -1000)
 	}
 }
 
@@ -199,7 +200,7 @@ func Revive(s *discordgo.Session, userID string, channelID string) {
 		}
 	}
 
-	stocks.ModifyCompanyValue("Revival Technologies", 500)
+	stocks.ModifyCompanyValue("Revival Technologies", -500)
 	sender.SendMessage(s, channelID, fmt.Sprintf("%v has been revived!", member.Mention()))
 }
 
@@ -265,14 +266,16 @@ func GambleRevive(s *discordgo.Session, i *discordgo.InteractionCreate, sacrific
 
 	switch strings.Split(msg.Embeds[0].Title, " FUCKING")[0] {
 	case strings.ToUpper(sacrificerMember.Nick):
+		stocks.ModifyCompanyValue("Execution Solutions LLC", 1000)
 		Execute(s, sacrificerID, msg.ChannelID, false)
 	case strings.ToUpper(victimMember.Nick):
+		stocks.ModifyCompanyValue("Revival Technologies", 2000)
 		Revive(s, victimID, msg.ChannelID)
 	case "SOUL":
+		stocks.ModifyCompanyValue("Revival Technologies", 2000)
+		stocks.ModifyCompanyValue("Execution Solutions LLC", 1000)
 		Execute(s, sacrificerID, msg.ChannelID, false)
 		Revive(s, victimID, msg.ChannelID)
-	case "NOTHING":
-		stocks.ModifyCompanyValue("Revival Technologies", -1000)
 	}
 }
 

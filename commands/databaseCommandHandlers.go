@@ -8,11 +8,13 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"BetterScorch/database"
+	"BetterScorch/execution"
 	"BetterScorch/secrets"
 	"BetterScorch/sender"
 	"BetterScorch/stocks"
@@ -160,60 +162,374 @@ func entereconomyHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 }
 
 func balanceHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	balance, err := stocks.ModifyBalance(i.Member.User.ID, 0)
-	if !sender.HandleErrInteraction(s, i, err) {
-		sender.Respond(s, i, fmt.Sprintf("You currently own %v ScorchCoin", balance), nil)
+	stocks.Mutex.Lock()
+	balance, err := stocks.GetBalance(i.Member.User.ID)
+	if sender.HandleErrInteraction(s, i, err) {
+		stocks.Mutex.Unlock()
+		return
 	}
+
+	portfolio, err := stocks.GetPortfolio(i.Member.User.ID)
+	if sender.HandleErrInteraction(s, i, err) {
+		stocks.Mutex.Unlock()
+		return
+	}
+
+	msg := fmt.Sprintf("You currently own %v ScorchCoin\n\n", balance)
+	if len(portfolio) == 0 {
+		msg += "You don't own any stocks, brokie 💀"
+	} else {
+		msg += "Your Portfolio:\n"
+		for company, amt := range portfolio {
+			msg += fmt.Sprintf("- %s: %d ScorchCoin\n", company, amt)
+		}
+	}
+
+	sender.Respond(s, i, msg, nil)
+	stocks.Mutex.Unlock()
 }
 
 func stonksHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	stocks.Mutex.Lock()
+
 	// You cant use options with boolean values so we parse an int instead
 	bool := false
 	if i.ApplicationCommandData().Options[2].IntValue() == 1 {
 		bool = true
 	}
 
+	var newVal int
+	var err error
 	if bool {
-		_, err := stocks.ModifyBalance(i.Member.User.ID, -int(i.ApplicationCommandData().Options[1].IntValue()))
-		if err != nil {
-			sender.RespondError(s, i, err.Error())
+		balance, err := stocks.ModifyBalance(i.Member.User.ID, 0)
+		if sender.HandleErrInteraction(s, i, err) {
+			stocks.Mutex.Unlock()
+			return
+		}
+		if balance < int(i.ApplicationCommandData().Options[1].IntValue()) {
+			stocks.Mutex.Unlock()
+			sender.RespondError(s, i, "bro wants to buy shares but cant afford it")
+			return
+		}
+
+		newVal, err = stocks.BuyShares(i.Member.User.ID, i.ApplicationCommandData().Options[0].StringValue(), int(i.ApplicationCommandData().Options[1].IntValue()))
+		if sender.HandleErrInteraction(s, i, err) {
+			stocks.Mutex.Unlock()
+			return
 		}
 	} else {
-		_, err := stocks.ModifyBalance(i.Member.User.ID, int(i.ApplicationCommandData().Options[1].IntValue()))
-		if err != nil {
-			sender.RespondError(s, i, err.Error())
+		newVal, err = stocks.BuyShares(i.Member.User.ID, i.ApplicationCommandData().Options[0].StringValue(), -int(i.ApplicationCommandData().Options[1].IntValue()))
+		if sender.HandleErrInteraction(s, i, err) {
+			stocks.Mutex.Unlock()
+			return
 		}
-	}
-
-	newVal, err := stocks.Trade(i.Member.User.ID, i.ApplicationCommandData().Options[0].StringValue(), int(i.ApplicationCommandData().Options[1].IntValue()), bool)
-	if err != nil {
-		sender.RespondError(s, i, err.Error())
 	}
 
 	sender.Respond(s, i, fmt.Sprintf("You now own %v of Scorchcoin in %v", newVal, i.ApplicationCommandData().Options[0].StringValue()), nil)
+	stocks.Mutex.Unlock()
 }
 
 func gambleHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	stocks.Mutex.Lock()
+
+	balance, err := stocks.ModifyBalance(i.Member.User.ID, 0)
+	if sender.HandleErrInteraction(s, i, err) {
+		stocks.Mutex.Unlock()
+		return
+	}
+
+	if balance < int(i.ApplicationCommandData().Options[0].IntValue()) {
+		sender.RespondError(s, i, "bro wants to gamble but is trying to bet more than he has")
+		stocks.Mutex.Unlock()
+		return
+	} else if int(i.ApplicationCommandData().Options[0].IntValue()) < 0 {
+		sender.RespondError(s, i, "bro wants to gamble but is trying to bet a negative value")
+		stocks.Mutex.Unlock()
+		return
+	}
+
+	stocks.Mutex.Unlock()
 	switch i.ApplicationCommandData().Options[1].IntValue() {
 	case 0:
 		coinflipHandler(s, i)
+	case 1:
+		slotsHandler(s, i)
 	}
+}
+
+func valuesHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	stocks.Mutex.Lock()
+
+	// Fetch all company names and their values
+	companies, err := database.GetAll("Company")
+	if sender.HandleErrInteraction(s, i, err) {
+		stocks.Mutex.Unlock()
+		return
+	}
+
+	var output strings.Builder
+
+	for _, row := range companies {
+		name := row[0]
+		value, _ := strconv.Atoi(row[1])
+
+		output.WriteString(fmt.Sprintf("%s — Value: %d SC\n", name, value))
+	}
+
+	sender.Respond(s, i, output.String(), nil)
+	stocks.Mutex.Unlock()
 }
 
 func coinflipHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	sender.Respond(s, i, "https://tenor.com/view/eminem-eminem-taern-eminem-taern-coin-toss-eminem-imperial-imperial-gif-13493891068666315081", nil)
 	time.Sleep(3 * time.Second)
+	stocks.Mutex.Lock()
 	if rand.Intn(2) == 0 {
+		err := stocks.ModifyCompanyValue("Gambling Inc", int(i.ApplicationCommandData().Options[0].IntValue()))
+		if sender.HandleErrInteractionFollowup(s, i, err) {
+			return
+		}
+
 		newVal, err := stocks.ModifyBalance(i.Member.User.ID, -int(i.ApplicationCommandData().Options[0].IntValue()))
 		if !sender.HandleErrInteractionFollowup(s, i, err) {
 			sender.Followup(s, i, fmt.Sprintf("YOU LOSE %v SCORCHCOIN (New Balance: %v)", i.ApplicationCommandData().Options[0].IntValue(), newVal))
 		}
 	} else {
+		err := stocks.ModifyCompanyValue("Gambling Inc", -int(i.ApplicationCommandData().Options[0].IntValue()))
+		if sender.HandleErrInteractionFollowup(s, i, err) {
+			return
+		}
+
 		newVal, err := stocks.ModifyBalance(i.Member.User.ID, int(i.ApplicationCommandData().Options[0].IntValue()))
 		if !sender.HandleErrInteractionFollowup(s, i, err) {
 			sender.Followup(s, i, fmt.Sprintf("YOU WIN %v SCORCHCOIN (New Balance: %v)", i.ApplicationCommandData().Options[0].IntValue(), newVal))
 		}
 	}
+	stocks.Mutex.Unlock()
+}
+
+func slotsHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	emojis := []string{"🔥", "🍷", "💀", "👻", "🎶", "💦"}
+	chosen := []string{}
+
+	for range 4 {
+		chosen = append(chosen, emojis[rand.Intn(6)])
+	}
+
+	sender.Respond(s, i, "Gamble initiated", nil)
+
+	s.WebhookEdit(sender.Webhook.ID, sender.Webhook.Name, sender.Webhook.Avatar, i.ChannelID)
+	msg, _ := s.WebhookExecute(sender.Webhook.ID, sender.Webhook.Token, true, &discordgo.WebhookParams{
+		Content:   "# ????",
+		Username:  "Slot Machine",
+		AvatarURL: "https://media.discordapp.net/attachments/1196943729387372634/1361087173067280454/image_proxy.png?ex=67fd7ab5&is=67fc2935&hm=d0ec1db9646e925ecd19cf15489564e7186964bcefcff4d29742714981f40432&=&format=webp&quality=lossless",
+	})
+
+	for i := range 4 {
+		time.Sleep(3 * time.Second)
+		slotString := "# "
+		slotString += strings.Join(chosen[:i+1], "")
+		for range 3 - i {
+			slotString += "?"
+		}
+
+		s.WebhookMessageEdit(sender.Webhook.ID, sender.Webhook.Token, msg.ID, &discordgo.WebhookEdit{
+			Content: &slotString,
+		})
+	}
+
+	counts := make(map[string]int)
+	for _, emoji := range chosen {
+		counts[emoji]++
+	}
+
+	maxMatch := 0
+	for _, count := range counts {
+		if count > maxMatch {
+			maxMatch = count
+		}
+	}
+
+	stocks.Mutex.Lock()
+
+	bettingValue := int(i.ApplicationCommandData().Options[0].IntValue())
+
+	if len(counts) == 2 && maxMatch == 2 {
+		err := stocks.ModifyCompanyValue("Gambling Inc", -bettingValue*150/100)
+		if sender.HandleErrInteractionFollowup(s, i, err) {
+			return
+		}
+
+		newVal, err := stocks.ModifyBalance(i.Member.User.ID, bettingValue*150/100)
+		if !sender.HandleErrInteractionFollowup(s, i, err) {
+			sender.Followup(s, i, fmt.Sprintf("TWO PAIRS! YOU WIN %v (150%% of bet) SCORCHCOIN (New Balance: %v)", bettingValue*150/100, newVal))
+		}
+	} else {
+		switch maxMatch {
+		case 1:
+			err := stocks.ModifyCompanyValue("Gambling Inc", bettingValue)
+			if sender.HandleErrInteractionFollowup(s, i, err) {
+				return
+			}
+
+			newVal, err := stocks.ModifyBalance(i.Member.User.ID, -bettingValue)
+			if !sender.HandleErrInteractionFollowup(s, i, err) {
+				sender.Followup(s, i, fmt.Sprintf("NO MATCH! YOU LOSE %v SCORCHCOIN BOZO (New Balance: %v)", bettingValue, newVal))
+			}
+		case 2:
+			err := stocks.ModifyCompanyValue("Gambling Inc", bettingValue*20/100)
+			if sender.HandleErrInteractionFollowup(s, i, err) {
+				return
+			}
+
+			newVal, err := stocks.ModifyBalance(i.Member.User.ID, -bettingValue*20/100)
+			if !sender.HandleErrInteractionFollowup(s, i, err) {
+				sender.Followup(s, i, fmt.Sprintf("ONE PAIR! YOU LOSE %v (20%% of bet) SCORCHCOIN (New Balance: %v)", bettingValue*20/100, newVal))
+			}
+		case 3:
+			err := stocks.ModifyCompanyValue("Gambling Inc", -bettingValue*3)
+			if sender.HandleErrInteractionFollowup(s, i, err) {
+				return
+			}
+
+			newVal, err := stocks.ModifyBalance(i.Member.User.ID, bettingValue*3)
+			if !sender.HandleErrInteractionFollowup(s, i, err) {
+				sender.Followup(s, i, fmt.Sprintf("TRIPLE! YOU WIN %v (300%% of bet) SCORCHCOIN (New Balance: %v)", bettingValue*3, newVal))
+			}
+		case 4:
+			for range 5 {
+				s.WebhookExecute(sender.Webhook.ID, sender.Webhook.Token, true, &discordgo.WebhookParams{
+					Content:   "# JACKPOT",
+					Username:  "Slot Machine",
+					AvatarURL: "https://media.discordapp.net/attachments/1196943729387372634/1361087173067280454/image_proxy.png?ex=67fd7ab5&is=67fc2935&hm=d0ec1db9646e925ecd19cf15489564e7186964bcefcff4d29742714981f40432&=&format=webp&quality=lossless",
+				})
+			}
+
+			err := stocks.ModifyCompanyValue("Gambling Inc", -bettingValue*90)
+			if sender.HandleErrInteractionFollowup(s, i, err) {
+				return
+			}
+
+			newVal, err := stocks.ModifyBalance(i.Member.User.ID, bettingValue*90)
+			if !sender.HandleErrInteractionFollowup(s, i, err) {
+				sender.Followup(s, i, fmt.Sprintf("JACKPOT! YOU WIN %v (9000%% of bet) SCORCHCOIN (New Balance: %v)", bettingValue*390, newVal))
+			}
+		}
+	}
+
+	stocks.Mutex.Unlock()
+}
+
+func buyHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	stocks.Mutex.Lock()
+
+	var company string
+	switch i.ApplicationCommandData().Options[0].IntValue() {
+	case 0:
+		company = "Execution Solutions LLC"
+	case 1:
+		company = "Revival Technologies"
+	}
+
+	price := 1000
+	balance, err := stocks.GetBalance(i.Member.User.ID)
+	if sender.HandleErrInteraction(s, i, err) {
+		stocks.Mutex.Unlock()
+		return
+	}
+
+	if price > balance {
+		sender.RespondError(s, i, "User tried to buy a company service but can't afford it")
+	} else {
+		newBalance, err := stocks.ModifyBalance(i.Member.User.ID, -price)
+		if sender.HandleErrInteraction(s, i, err) {
+			stocks.Mutex.Unlock()
+			return
+		}
+		err = stocks.ModifyCompanyValue(company, price)
+		if sender.HandleErrInteraction(s, i, err) {
+			stocks.Mutex.Unlock()
+			return
+		}
+
+		sender.Respond(s, i, fmt.Sprintf("Spend %v ScorchCoin (New balance: %v)", price, newBalance), nil)
+		switch i.ApplicationCommandData().Options[0].IntValue() {
+		case 0:
+			member, _ := s.GuildMember(i.GuildID, i.ApplicationCommandData().Options[1].UserValue(nil).ID)
+			if IsAdminAbuser(member) {
+				sender.Followup(s, i, "Target is admin abuser, execution denied")
+			} else {
+				execution.Execute(s, i.ApplicationCommandData().Options[1].UserValue(nil).ID, i.ChannelID, false)
+			}
+		case 1:
+			execution.Revive(s, i.ApplicationCommandData().Options[1].UserValue(nil).ID, i.ChannelID)
+		}
+	}
+
+	stocks.Mutex.Unlock()
+}
+
+func giveHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	stocks.Mutex.Lock()
+
+	balance, err := stocks.GetBalance(i.Member.User.ID)
+	if sender.HandleErrInteraction(s, i, err) {
+		stocks.Mutex.Unlock()
+		return
+	}
+
+	if balance < int(i.ApplicationCommandData().Options[0].IntValue()) {
+		sender.RespondError(s, i, "User tried to buy send money but doesn't have enough")
+	} else if i.ApplicationCommandData().Options[0].IntValue() < 0 {
+		sender.RespondError(s, i, "User tried to buy send money but typed in a negative value")
+	} else {
+		receiverVal, err := stocks.ModifyBalance(i.ApplicationCommandData().Options[1].UserValue(nil).ID, int(i.ApplicationCommandData().Options[0].IntValue()))
+		if sender.HandleErrInteraction(s, i, err) {
+			stocks.Mutex.Unlock()
+			return
+		}
+		senderVal, err := stocks.ModifyBalance(i.Member.User.ID, -int(i.ApplicationCommandData().Options[0].IntValue()))
+		if sender.HandleErrInteraction(s, i, err) {
+			stocks.Mutex.Unlock()
+			return
+		}
+
+		m, _ := s.GuildMember(i.GuildID, i.ApplicationCommandData().Options[1].UserValue(nil).ID)
+		sender.Respond(s, i, fmt.Sprintf("Successfully send %vSC to %v\nYour new balance: %v\nTheir new balance:%v", i.ApplicationCommandData().Options[0].IntValue(), m.Nick, senderVal, receiverVal), nil)
+	}
+
+	stocks.Mutex.Unlock()
+}
+
+func graphHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	file, err := os.Open("multiline.png")
+	if sender.HandleErrInteraction(s, i, err) {
+		return
+	}
+	defer file.Close()
+
+	file2, err := os.Open("gamble.png")
+	if sender.HandleErrInteraction(s, i, err) {
+		return
+	}
+	defer file2.Close()
+
+	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Files: []*discordgo.File{
+				{
+					Name:   "multiline.png",
+					Reader: file,
+				},
+				{
+					Name:   "gamble.png",
+					Reader: file2,
+				},
+			},
+		},
+	})
+	sender.HandleErrInteraction(s, i, err)
 }
 
 /*

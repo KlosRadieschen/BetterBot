@@ -405,6 +405,10 @@ var commands = map[string]command{
 							Name:  "coinflip",
 							Value: 0,
 						},
+						{
+							Name:  "slots",
+							Value: 1,
+						},
 					},
 				},
 			},
@@ -450,6 +454,50 @@ var commands = map[string]command{
 			},
 		},
 		handler: stonksHandler,
+	},
+	"buy": {
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "buy",
+			Description: "buy stuff with your hard earned money",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Name:        "service",
+					Description: "The service you want to buy",
+					Required:    true,
+					Choices: []*discordgo.ApplicationCommandOptionChoice{
+						{
+							Name:  "execution",
+							Value: 0,
+						},
+						{
+							Name:  "revive",
+							Value: 1,
+						},
+					},
+				},
+				userOption("target", "target of the service you buy", true),
+			},
+		},
+		handler: buyHandler,
+	},
+	"values": {
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "values",
+			Description: "List all current company values",
+		},
+		handler: valuesHandler,
+	},
+	"give": {
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "give",
+			Description: "List all current company values",
+			Options: []*discordgo.ApplicationCommandOption{
+				intOption("amount", "How much you want to send", true),
+				userOption("receiver", "The person receiving the funds", true),
+			},
+		},
+		handler: giveHandler,
 	},
 
 	/*
@@ -521,6 +569,13 @@ var commands = map[string]command{
 			},
 		},
 		handler: ticketHandler,
+	},
+	"graph": {
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "graph",
+			Description: "Get the stock graph",
+		},
+		handler: graphHandler,
 	},
 }
 

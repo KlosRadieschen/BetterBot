@@ -9,6 +9,7 @@ import (
 	"BetterScorch/polls"
 	"BetterScorch/secrets"
 	"BetterScorch/sender"
+	"BetterScorch/stocks"
 	"BetterScorch/webhooks"
 	"fmt"
 	"log/slog"
@@ -115,6 +116,8 @@ func readyHandler(s *discordgo.Session, r *discordgo.Ready) {
 				},
 			},
 		})
+
+		go stocks.RegularHandler()
 
 		fmt.Println("Start successful, beginning log")
 		fmt.Println("---------------------------------------------------")

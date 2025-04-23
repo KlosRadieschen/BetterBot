@@ -56,10 +56,10 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	go webhooks.CheckAndUseCharacters(s, m)
 	go checkAndSendUserMessages(s, m)
 
+	if m.Author.Bot {
+		execution.CheckAndDeleteExecuteeTupperMessage(s, m, Msgs)
+	}
 	if m.Author.Bot || execution.CheckAndDeleteExecuteeMessage(s, m) || Sleeping || (channel.ParentID != "1234128503968891032" && channel.ParentID != "1300423257262133280") {
-		if m.Author.Bot {
-			execution.CheckAndDeleteExecuteeTupperMessage(s, m, Msgs)
-		}
 		return
 	}
 
