@@ -14,6 +14,7 @@ import (
 
 type inputPoll struct {
 	votes       map[string][]string
+	options     []string
 	multioption bool
 	cancel      func()
 }

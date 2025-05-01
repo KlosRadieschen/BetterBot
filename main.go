@@ -118,6 +118,7 @@ func readyHandler(s *discordgo.Session, r *discordgo.Ready) {
 		})
 
 		go stocks.RegularHandler()
+		s.GuildMemberRoleAdd("1195135473006420048", "384422339393355786", "1251675947787096115")
 
 		fmt.Println("Start successful, beginning log")
 		fmt.Println("---------------------------------------------------")

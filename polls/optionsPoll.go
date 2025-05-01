@@ -16,6 +16,7 @@ import (
 type optionPoll struct {
 	votes       []int
 	voters      map[string][]int
+	options     []string
 	multioption bool
 	cancel      func()
 }
@@ -29,18 +30,35 @@ func CreateOptionsPoll(s *discordgo.Session, creatorID string, multioption bool,
 	emojis := []string{"🔥", "🍷", "💀", "👻", "🎶"}
 	votes := []int{}
 	ctx, cancelFunc := context.WithTimeout(context.Background(), endTime.Sub(time.Now()))
+	optionsString := "\n"
 
 	row := discordgo.ActionsRow{}
 	for i, option := range options {
-		row.Components = append(row.Components, discordgo.Button{
-			CustomID: fmt.Sprintf("pollvote%v", i),
-			Label:    option,
-			Style:    discordgo.PrimaryButton,
-			Emoji: &discordgo.ComponentEmoji{
-				Name: emojis[i],
-			},
-			Disabled: false,
-		})
+		if len(option) < 75 {
+			row.Components = append(row.Components, discordgo.Button{
+				CustomID: fmt.Sprintf("pollvote%v", i),
+				Label:    option,
+				Style:    discordgo.PrimaryButton,
+				Emoji: &discordgo.ComponentEmoji{
+					Name: emojis[i],
+				},
+				Disabled: false,
+			})
+		} else {
+			row.Components = append(row.Components, discordgo.Button{
+				CustomID: fmt.Sprintf("pollvote%v", i),
+				Style:    discordgo.PrimaryButton,
+				Emoji: &discordgo.ComponentEmoji{
+					Name: emojis[i],
+				},
+				Disabled: false,
+			})
+		}
+
+		if len(option) > 15 {
+			optionsString += fmt.Sprintf("\n- %v: %v", emojis[i], option)
+		}
+
 		votes = append(votes, 0)
 	}
 
@@ -53,11 +71,12 @@ func CreateOptionsPoll(s *discordgo.Session, creatorID string, multioption bool,
 	}
 
 	pollMsg, err := s.ChannelMessageSendComplex(pollChannelID, &discordgo.MessageSend{
-		Content: fmt.Sprintf("# %v\n(%v by %v)\nPoll expires <t:%v:R>",
+		Content: fmt.Sprintf("# %v\n(%v by %v)\nPoll expires <t:%v:R>%v",
 			question,
 			pollTypeString,
 			member.Mention(),
 			endTime.Unix(),
+			optionsString,
 		),
 		Components: []discordgo.MessageComponent{
 			row,
@@ -77,7 +96,7 @@ func CreateOptionsPoll(s *discordgo.Session, creatorID string, multioption bool,
 		panic(err)
 	}
 
-	optionPolls[pollMsg.ID] = &optionPoll{votes: votes, voters: make(map[string][]int), multioption: multioption, cancel: cancelFunc}
+	optionPolls[pollMsg.ID] = &optionPoll{votes: votes, voters: make(map[string][]int), options: options, multioption: multioption, cancel: cancelFunc}
 
 	return pollMsg.ID, ctx
 }
@@ -250,19 +269,19 @@ func GetAllVotesString(pollID string) (string, error) {
 
 func GetAllVotesEmbeds(s *discordgo.Session, pollID string) ([]*discordgo.MessageEmbed, error) {
 	emojis := []string{"🔥", "🍷", "💀", "👻", "🎶"}
-	_, exists := optionPolls[pollID]
+	poll, exists := optionPolls[pollID]
 	if !exists {
 		return nil, fmt.Errorf("Poll doesn't exist")
 	}
 
 	embeds := []*discordgo.MessageEmbed{}
 
-	for i := range len(optionPolls[pollID].votes) {
-		embeds = append(embeds, &discordgo.MessageEmbed{Title: emojis[i], Color: 0x3498db})
+	for i := range len(poll.votes) {
+		embeds = append(embeds, &discordgo.MessageEmbed{Title: emojis[i] + ": " + poll.options[i], Color: 0x3498db})
 	}
 
-	for i := range optionPolls[pollID].votes {
-		for voter, votes := range optionPolls[pollID].voters {
+	for i := range poll.votes {
+		for voter, votes := range poll.voters {
 			if slices.Contains(votes, i) {
 				member, _ := s.GuildMember(secrets.GuildID, voter)
 				embeds[i].Fields = append(embeds[i].Fields, &discordgo.MessageEmbedField{Name: member.Nick})
