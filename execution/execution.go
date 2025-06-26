@@ -331,10 +331,32 @@ func CheckAndDeleteExecuteeMessage(s *discordgo.Session, m *discordgo.MessageCre
 
 func CheckAndDeleteExecuteeTupperMessage(s *discordgo.Session, m *discordgo.MessageCreate, msgs map[string]*list.List) {
 	for _, executee := range executees {
-		if msgs[executee.id] != nil && strings.Contains(msgs[executee.id].Back().Value.(*discordgo.Message).Content, m.Content) && m.Content != "" {
-			slog.Info("Deleted tupper message from executed user", "userID", executee.id, "message", m.Content)
-			s.ChannelMessageDelete(m.ChannelID, m.ID)
-			return
+		if msgs[executee.id] != nil && m.Content != "" {
+			// Split the current message content into lines
+			lines := strings.Split(m.Content, "\n")
+
+			var filteredContentBuilder strings.Builder
+
+			for _, line := range lines {
+				trimmedLine := strings.TrimSpace(line)
+				if !strings.HasPrefix(trimmedLine, ">") {
+					if filteredContentBuilder.Len() > 0 {
+						filteredContentBuilder.WriteString("\n")
+					}
+					filteredContentBuilder.WriteString(trimmedLine)
+				}
+			}
+
+			// Get the filtered content as a single string
+			filteredContent := strings.ToLower(filteredContentBuilder.String())
+
+			lastMessage := msgs[executee.id].Back().Value.(*discordgo.Message)
+
+			if strings.Contains(strings.ToLower(lastMessage.Content), filteredContent) {
+				slog.Info("Deleted tupper message from executed user", "userID", executee.id, "message", m.Content)
+				s.ChannelMessageDelete(m.ChannelID, m.ID)
+				return
+			}
 		}
 	}
 }

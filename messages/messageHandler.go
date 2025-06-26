@@ -76,7 +76,6 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 			}
 		}
 	}
-	handleMCRef(s, m)
 }
 
 func handleAIResponses(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -123,47 +122,5 @@ func checkAndSendUserMessages(s *discordgo.Session, m *discordgo.MessageCreate) 
 				return um.SenderName == userMessage.SenderName
 			})
 		}
-	}
-}
-
-func handleMCRef(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta("chicken"))).FindStringSubmatch(strings.ToLower(m.Content)) != nil || regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta("jockey"))).FindStringSubmatch(strings.ToLower(m.Content)) != nil {
-		sender.SendCharacterMessage(s, m, "# CHICKEN JOCKEY", "Jack \"Steve\" Black", "https://platform.polygon.com/wp-content/uploads/sites/2/2025/04/MCDMIMO_WB046.jpg?quality=90&strip=all&crop=0,0,100,100&w=2400")
-	}
-
-	if regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta("nether"))).FindStringSubmatch(strings.ToLower(m.Content)) != nil {
-		sender.SendCharacterMessage(s, m, "# THE NETHER", "Jack \"Steve\" Black", "https://platform.polygon.com/wp-content/uploads/sites/2/2025/04/MCDMIMO_WB046.jpg?quality=90&strip=all&crop=0,0,100,100&w=2400")
-	}
-
-	if regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta("water"))).FindStringSubmatch(strings.ToLower(m.Content)) != nil || regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta("bucket"))).FindStringSubmatch(strings.ToLower(m.Content)) != nil || regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta("release"))).FindStringSubmatch(strings.ToLower(m.Content)) != nil {
-		sender.SendCharacterMessage(s, m, "# WATER BUCKET, RELEASE", "Jack \"Steve\" Black", "https://platform.polygon.com/wp-content/uploads/sites/2/2025/04/MCDMIMO_WB046.jpg?quality=90&strip=all&crop=0,0,100,100&w=2400")
-	}
-
-	if regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta("flint"))).FindStringSubmatch(strings.ToLower(m.Content)) != nil || regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta("steel"))).FindStringSubmatch(strings.ToLower(m.Content)) != nil {
-		sender.SendCharacterMessage(s, m, "# FLINT AND STEEL", "Jack \"Steve\" Black", "https://platform.polygon.com/wp-content/uploads/sites/2/2025/04/MCDMIMO_WB046.jpg?quality=90&strip=all&crop=0,0,100,100&w=2400")
-	}
-
-	if regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta("craft"))).FindStringSubmatch(strings.ToLower(m.Content)) != nil || regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta("crafting"))).FindStringSubmatch(strings.ToLower(m.Content)) != nil || regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta("table"))).FindStringSubmatch(strings.ToLower(m.Content)) != nil {
-		sender.SendCharacterMessage(s, m, "# THIS, IS A CRAFTING TABLE", "Jack \"Steve\" Black", "https://platform.polygon.com/wp-content/uploads/sites/2/2025/04/MCDMIMO_WB046.jpg?quality=90&strip=all&crop=0,0,100,100&w=2400")
-	}
-
-	if regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta("mine"))).FindStringSubmatch(strings.ToLower(m.Content)) != nil || regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta("minecraft"))).FindStringSubmatch(strings.ToLower(m.Content)) != nil {
-		sender.SendCharacterMessage(s, m, "# FIRST WE MINE THEN WE CRAFT! LETS MINECRAFT", "Jack \"Steve\" Black", "https://platform.polygon.com/wp-content/uploads/sites/2/2025/04/MCDMIMO_WB046.jpg?quality=90&strip=all&crop=0,0,100,100&w=2400")
-	}
-
-	if regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta("villager"))).FindStringSubmatch(strings.ToLower(m.Content)) != nil || regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta("villagers"))).FindStringSubmatch(strings.ToLower(m.Content)) != nil || regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta("village"))).FindStringSubmatch(strings.ToLower(m.Content)) != nil {
-		sender.SendCharacterMessage(s, m, "# THESE GUYS? THEY’RE THE VILLAGERS!", "Jack \"Steve\" Black", "https://platform.polygon.com/wp-content/uploads/sites/2/2025/04/MCDMIMO_WB046.jpg?quality=90&strip=all&crop=0,0,100,100&w=2400")
-	}
-
-	if regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta("steve"))).FindStringSubmatch(strings.ToLower(m.Content)) != nil || regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta("i am"))).FindStringSubmatch(strings.ToLower(m.Content)) != nil {
-		sender.SendCharacterMessage(s, m, "# I... AM STEVE", "Jack \"Steve\" Black", "https://platform.polygon.com/wp-content/uploads/sites/2/2025/04/MCDMIMO_WB046.jpg?quality=90&strip=all&crop=0,0,100,100&w=2400")
-	}
-
-	if regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta("loaf"))).FindStringSubmatch(strings.ToLower(m.Content)) != nil {
-		sender.SendCharacterMessage(s, m, "# THEY LOVE CRUSHING LOAF", "Jack \"Steve\" Black", "https://platform.polygon.com/wp-content/uploads/sites/2/2025/04/MCDMIMO_WB046.jpg?quality=90&strip=all&crop=0,0,100,100&w=2400")
-	}
-
-	if regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta("lava"))).FindStringSubmatch(strings.ToLower(m.Content)) != nil || regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta("chicken"))).FindStringSubmatch(strings.ToLower(m.Content)) != nil {
-		sender.SendCharacterMessage(s, m, "# LA-LA-LA-LAVA, CH-CH-CH-CHICKEN\n# STEVE'S LAVA CHICKEN, YEAH, IT'S TASTY AS HELL\n# OOOH MAMACITA NOW YOU'RE RINGING THE BELL\n# CRISPY AND JUICY, NOW YOU'RE HAVING A SNACK\n# OOOH SUPER SPICY, IT'S A LAVA ATTAAAAACK", "Jack \"Steve\" Black", "https://platform.polygon.com/wp-content/uploads/sites/2/2025/04/MCDMIMO_WB046.jpg?quality=90&strip=all&crop=0,0,100,100&w=2400")
 	}
 }
