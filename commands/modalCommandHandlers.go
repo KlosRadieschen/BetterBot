@@ -81,6 +81,6 @@ func messageModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		Message:     message,
 	})
 
-	sender.RespondEphemeral(s, i, "Message send", nil)
+	sender.RespondEphemeral(s, i, "Message sent", nil)
 	go sender.SetResponseTimeout(s, i, 5*time.Second)
 }
