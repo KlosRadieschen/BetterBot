@@ -280,16 +280,16 @@ func GambleRevive(s *discordgo.Session, i *discordgo.InteractionCreate, sacrific
 }
 
 func ReviveAll(s *discordgo.Session, channelID string) {
-	for i, executee := range executees {
+	for _, executee := range executees {
 		member := Member(s, executee.id)
 		for range executee.count {
 			sender.SendMessage(s, channelID, fmt.Sprintf("%v\nhttps://tenor.com/view/cat-revive-friends-animated-friendship-gif-8246087956711984034", member.Mention()))
 		}
 		s.GuildMemberRoleRemove(secrets.GuildID, executee.id, "1253410294999548046")
 		s.GuildMemberRoleAdd(secrets.GuildID, executee.id, executee.role)
-		executees = append(executees[:i], executees[i+1:]...)
 	}
 
+	executees = []executee{}
 	sender.SendMessage(s, channelID, "Everyone has been revived!")
 }
 
