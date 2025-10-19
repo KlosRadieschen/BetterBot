@@ -23,7 +23,7 @@ var CharacterBuffer = make(map[string][]Character)
 func AddCharacter(ownerID string, character Character) error {
 	CharacterBuffer[ownerID] = append(CharacterBuffer[ownerID], character)
 
-	err := database.Insert("Character",
+	_, err := database.Insert("Character",
 		&database.DBValue{Name: "pk_ownerID", Value: character.OwnerID},
 		&database.DBValue{Name: "name", Value: character.Name},
 		&database.DBValue{Name: "avatar", Value: character.AvatarLink},

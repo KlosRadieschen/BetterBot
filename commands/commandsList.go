@@ -577,12 +577,24 @@ var commands = map[string]command{
 		},
 		handler: graphHandler,
 	},
+
+	"swagmessage": {
+		declaration: &discordgo.ApplicationCommand{
+			Name:        "swagmessage",
+			Description: "Send a top secret message (SWAG members only)",
+			Options: []*discordgo.ApplicationCommandOption{
+				stringOption("message", "The secret message", true),
+			},
+		},
+		handler: sendSecretMessageHandler,
+	},
 }
 
 var componentAndModalCommands = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
 	"pollvote":             pollVoteHandler,
 	"pollshow":             pollShowHandler,
 	"inputpollvote":        inputPollVoteHandler,
+	"decrypt":              decryptHandler,
 	"inputpollmodalcreate": inputPollModalCreateHandler,
 	"inputpollmodalsubmit": inputPollModalSubmit,
 	"inputpollshow":        inputPollShowHandler,

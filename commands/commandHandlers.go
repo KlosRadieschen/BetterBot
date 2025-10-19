@@ -5,6 +5,7 @@ import (
 	"BetterScorch/execution"
 	"BetterScorch/messages"
 	"BetterScorch/polls"
+	secretmessages "BetterScorch/secretMessages"
 	"BetterScorch/secrets"
 	"BetterScorch/sender"
 	"BetterScorch/webhooks"
@@ -124,6 +125,7 @@ func rollHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 
 	value := rand.Intn(max) + 1
+
 	if modifier == 0 {
 		sender.Respond(s, i, fmt.Sprintf("%v%v/%v", reason, value, max), nil)
 	} else {
@@ -317,4 +319,14 @@ func ticketHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	})
 
 	sender.RespondEphemeral(s, i, "Ticket submitted", nil)
+}
+
+func sendSecretMessageHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	if !isSWAG(i.Member) && !isHC(i.Member) {
+		sender.RespondError(s, i, "User tried to send an encrypted message but they are not part of SWAG")
+		return
+	}
+
+	secretmessages.SendSecretMessage(s, i.ApplicationCommandData().Options[0].StringValue(), i.ChannelID, i.Member.User.ID, i.Member.Nick)
+	sender.RespondEphemeral(s, i, "Success", nil)
 }

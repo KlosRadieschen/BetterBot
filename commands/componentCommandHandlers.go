@@ -1,9 +1,11 @@
 package commands
 
 import (
+	"BetterScorch/database"
 	"BetterScorch/polls"
 	"BetterScorch/sender"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -88,4 +90,22 @@ func inputPollShowHandler(s *discordgo.Session, i *discordgo.InteractionCreate) 
 		}
 	}
 	polls.PollMutex.Unlock()
+}
+
+func decryptHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	if !isSWAG(i.Member) && !isHC(i.Member) {
+		sender.RespondEphemeral(s, i, "https://tenor.com/view/yellow-emoji-no-no-emotiguy-no-no-no-gif-gif-9742000569423889376", nil)
+		return
+	}
+
+	ID, _ := strings.CutPrefix(i.MessageComponentData().CustomID, "decrypt")
+	r, _ := database.Get("EncryptedMessage", []string{"msg"}, &database.DBValue{Name: "msgID", Value: ID})
+
+	embed := &discordgo.MessageEmbed{
+		Title:       "Decrypted Message",
+		Color:       16738740,
+		Description: r[0][0],
+	}
+
+	sender.RespondEphemeral(s, i, "", []*discordgo.MessageEmbed{embed})
 }

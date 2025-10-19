@@ -79,7 +79,14 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func handleAIResponses(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.Type == 19 && m.ReferencedMessage.Author.ID == "1196526025211904110" || regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta("scorch"))).FindStringSubmatch(strings.ToLower(m.Content)) != nil {
+	scorchUser, _ := s.User("1196526025211904110")
+	found := slices.ContainsFunc(m.Mentions, func(u *discordgo.User) bool {
+		return u.ID == scorchUser.ID
+	})
+
+	if (m.Type == 19 && m.ReferencedMessage.Author.ID == "1196526025211904110") || regexp.MustCompile(fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta("scorch"))).FindStringSubmatch(strings.ToLower(m.Content)) != nil || found {
+		log.Println("AI response triggered: " + m.Content)
+
 		s.ChannelTyping(m.ChannelID)
 		resp, embed, err := ai.GenerateResponse(m.Member.Nick, m.Content)
 

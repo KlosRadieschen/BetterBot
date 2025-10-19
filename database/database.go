@@ -33,10 +33,10 @@ func Connect() {
 	db.SetConnMaxLifetime(time.Hour * 2) // Connections are recycled after two hours.
 }
 
-func Insert(table string, values ...*DBValue) error {
+func Insert(table string, values ...*DBValue) (int64, error) {
 	err := db.Ping()
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	fmt.Println(values)
@@ -52,16 +52,16 @@ func Insert(table string, values ...*DBValue) error {
 
 	stmt, err := db.Prepare(query)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(stringsToAnys(getDBValues(values))...)
+	r, err := stmt.Exec(stringsToAnys(getDBValues(values))...)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	return nil
+	return r.LastInsertId()
 }
 
 func Get(table string, fields []string, whereValues ...*DBValue) ([][]string, error) {

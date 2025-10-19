@@ -214,7 +214,8 @@ func GetCompanyValue(companyName string) (int, error) {
 }
 
 func Enter(user string) error {
-	return database.Insert("ScorchCoin", &database.DBValue{Name: "pk_user", Value: user}, &database.DBValue{Name: "balance", Value: "420"})
+	_, err := database.Insert("ScorchCoin", &database.DBValue{Name: "pk_user", Value: user}, &database.DBValue{Name: "balance", Value: "420"})
+	return err
 }
 
 func RegularHandler() {

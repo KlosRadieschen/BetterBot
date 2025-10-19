@@ -118,7 +118,7 @@ func registerHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		pfpLink = attachment.URL
 	}
 
-	err := database.Insert("Pilot", []*database.DBValue{
+	_, err := database.Insert("Pilot", []*database.DBValue{
 		{Name: "name", Value: i.ApplicationCommandData().Options[0].StringValue()},
 		{Name: "callsign", Value: i.ApplicationCommandData().Options[1].StringValue()},
 		{Name: "picture", Value: pfpLink},

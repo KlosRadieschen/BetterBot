@@ -128,6 +128,13 @@ func isHC(m *discordgo.Member) bool {
 	return false
 }
 
+func isSWAG(m *discordgo.Member) bool {
+	if slices.Contains(m.Roles, "1199148174258995231") {
+		return true
+	}
+	return false
+}
+
 func IsAdminAbuser(m *discordgo.Member) bool {
 	return m.User.ID == "384422339393355786" || m.User.ID == "920342100468436993" || m.User.ID == "1079774043684745267" || m.User.ID == "952145898824138792"
 }
